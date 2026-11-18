@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pruebas Parte B</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #f6f7fb; color: #222; }
+    h1 { font-size: 1.3rem; }
+    .aviso { background: #fff3cd; padding: 8px 12px; border-radius: 6px; font-size: .9rem; }
+    #menu { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+    #menu button { padding: 6px 10px; border: 1px solid #6a5acd; background: #fff; border-radius: 6px; cursor: pointer; }
+    #menu button:hover { background: #ece9ff; }
+    #resultado { min-height: 1.5em; font-weight: 600; margin: 8px 0; }
+    svg { background: #fff; border-radius: 8px; width: 100%; max-width: 720px; height: auto; }
+    .nodo circle { fill: #e8e6ff; stroke: #6a5acd; stroke-width: 2; transition: fill .25s, transform .25s; }
+    .nodo text { font-size: 14px; text-anchor: middle; dominant-baseline: central; }
+    .nodo-activo circle { fill: #ffb703; stroke: #fb8500; }
+    .nodo-visitado circle { fill: #8ecae6; }
+    table { border-collapse: collapse; margin-top: 16px; font-size: .9rem; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+    .ok { color: #1a7f37; } .mal { color: #c62828; }
+  </style>
+</head>
+<body>
+  <h1>Pruebas de la Parte B (recorridos, niveles y operaciones libres)</h1>
+  <p class="aviso">Usa un ABB temporal (<code>pruebas/abb-temporal.js</code>) porque <code>js/abb.js</code> de L todavía no está en el repo.
+    El dibujo de aquí es solo para probar; el real lo hace L.</p>
+
+  <label>Valor: <input id="valor" type="number" value="35" style="width:80px"></label>
+  <div id="menu"></div>
+  <div id="resultado"></div>
+  <svg id="lienzo" viewBox="0 0 720 300"></svg>
+
+  <h2>Pruebas automáticas</h2>
+  <table id="tabla"><tr><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th></th></tr></table>
+
+  <script src="abb-temporal.js"></script>
+  <script src="../js/abb-parteB.js"></script>
+  <script src="../js/ui-parteB.js"></script>
+  <script>
+    // Árbol de ejemplo
+    const arbol = new ABB();
+    [50, 30, 70, 20, 40, 60, 80, 35, 45, 65].forEach((v) => arbol.insertar(v));
+
+    // Dibujo simple (solo para la prueba): cada nodo lleva data-valor
+    function dibujar() {
+      const svg = document.getElementById("lienzo");
+      let html = "";
+      const pintar = (n, x, y, dx) => {
+        if (!n) return;
+        for (const [h, hx] of [[n.izquierdo, x - dx], [n.derecho, x + dx]]) {
+          if (h) html += `<line x1="${x}" y1="${y}" x2="${hx}" y2="${y + 70}" stroke="#999"/>`;
+        }
+        pintar(n.izquierdo, x - dx, y + 70, dx / 2);
+        pintar(n.derecho, x + dx, y + 70, dx / 2);
+        html += `<g class="nodo" data-valor="${n.valor}"><circle cx="${x}" cy="${y}" r="20"/><text x="${x}" y="${y}">${n.valor}</text></g>`;
+      };
+      pintar(arbol.raiz, 360, 35, 170);
+      svg.innerHTML = html;
+    }
+    dibujar();
+
+    // Menú con los nombres reales de las 9 opciones
+    const menu = document.getElementById("menu");
+    ParteB.OPCIONES.forEach((op) => {
+      const b = document.createElement("button");
+      b.textContent = `${op.numero}. ${op.nombre}`;
+      b.dataset.op = op.id;
+      b.onclick = () => {
+        const r = ParteB.ejecutar(op.id, arbol, document.getElementById("valor").value);
+        const div = document.getElementById("resultado");
+        div.textContent = r.texto;
+        div.className = r.ok ? "ok" : "mal";
+        ParteB.animar(r.nodos, 450);
+      };
+      menu.appendChild(b);
+    });
+
+    // Pruebas automáticas
+    const vacio = new ABB();
+    const casos = [
+      ["Anchura", arbol.recorridoAnchura(), [50, 30, 70, 20, 40, 60, 80, 35, 45, 65]],
+      ["Preorden", arbol.preorden(), [50, 30, 20, 40, 35, 45, 70, 60, 65, 80]],
+      ["Postorden", arbol.postorden(), [20, 35, 45, 40, 30, 65, 60, 80, 70, 50]],
+      ["Inorden", arbol.inorden(), [20, 30, 35, 40, 45, 50, 60, 65, 70, 80]],
+      ["Número de niveles", arbol.numeroNiveles(), 4],
+      ["Nivel de 50 (raíz)", arbol.nivelDe(50), 0],
+      ["Nivel de 35", arbol.nivelDe(35), 3],
+      ["Nivel de 99 (no existe)", arbol.nivelDe(99), -1],
+      ["Mínimo y máximo", arbol.minimoYMaximo(), { minimo: 20, maximo: 80 }],
+      ["Nodos y hojas", arbol.contarNodosYHojas(), { totalNodos: 10, totalHojas: 5, hojas: [20, 35, 45, 65, 80] }],
+      ["Camino a 45", arbol.caminoA(45), [50, 30, 40, 45]],
+      ["Camino a 99", arbol.caminoA(99), null],
+      ["Árbol vacío: anchura", vacio.recorridoAnchura(), []],
+      ["Árbol vacío: niveles", vacio.numeroNiveles(), 0],
+      ["Árbol vacío: min/max", vacio.minimoYMaximo(), null],
+      ["UI: nivel con texto \"35\"", ParteB.ejecutar("nivelDe", arbol, "35").texto, "El nodo 35 está en el nivel 3."],
+    ];
+    const tabla = document.getElementById("tabla");
+    let fallos = 0;
+    for (const [nombre, obtenido, esperado] of casos) {
+      const bien = JSON.stringify(obtenido) === JSON.stringify(esperado);
+      if (!bien) fallos++;
+      tabla.insertAdjacentHTML("beforeend",
+        `<tr><td>${nombre}</td><td>${JSON.stringify(esperado)}</td><td>${JSON.stringify(obtenido)}</td>
+         <td class="${bien ? "ok" : "mal"}">${bien ? "✔" : "✘"}</td></tr>`);
+    }
+    window.resumenPruebas = { total: casos.length, fallos };
+  </script>
+</body>
+</html>
