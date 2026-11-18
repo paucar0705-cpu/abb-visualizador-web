@@ -47,15 +47,15 @@ También funciona con la extensión *Live Server* de VS Code y con GitHub Pages.
 ## Estructura de archivos
 
 ```
-index.html               A   Página principal (controles provisionales)
-css/estilos.css          A   Paleta, estilos del árbol y clases de animación
+index.html               A   Página principal (panel de controles, mensajes, área del árbol y leyenda)
+css/estilos.css          A   Paleta, estilos del árbol, estados y animaciones
 js/
   nodo.js                A   export class Nodo
   abb.js                 A   export class ABB (+ VALOR_MINIMO, VALOR_MAXIMO, esValorValido)
   abb-parteB.js          B   Métodos de la Parte B sobre ABB.prototype
   arbol-svg.js           A   Cálculo de posiciones y dibujo SVG
-  animacion.js           A+B Animador compartido (pendiente)
-  ui.js                  A   Interfaz de la Parte A y armado del menú (pendiente)
+  animacion.js           A+B Animador compartido
+  ui.js                  A   Operaciones de la Parte A, validación de entrada y menú
   ui-parteB.js           B   Opciones de la Parte B para el menú
   main.js                A   Punto de entrada
 pruebas/
@@ -63,6 +63,8 @@ pruebas/
   prueba-parteA.html     A   Muestra los resultados de casos-parteA.js
   casos-grafica.js       A   Escenarios y pruebas del cálculo de posiciones (sin DOM)
   prueba-grafica.html    A   Dibuja los escenarios y prueba el SVG generado
+  casos-interfaz.js      A   Pruebas de la validación de entrada (sin DOM)
+  prueba-animacion.html  A   Pruebas del animador en el navegador (y de casos-interfaz.js)
   prueba-parteB.html     B
   abb-temporal.js        B   ABB provisional; se elimina al integrar js/abb.js
 ```
@@ -92,10 +94,16 @@ class ABB {
   insertar(valor)     // → { insertado, camino, motivo }
   buscar(valor)       // → { encontrado, camino, motivo }
   eliminar(valor)     // → { eliminado, caso, camino, reemplazo, motivo }
+  analizarEliminacion(valor)  // → { eliminable, caso, camino, reemplazo, caminoSucesor, motivo }
+                              //   dice qué haría eliminar() SIN modificar el árbol
   minimo()            // → number | null (null si está vacío)
   maximo()            // → number | null
 }
 ```
+
+`analizarEliminacion` permite mostrar el estado **anterior** antes de eliminar. Sus campos significan lo mismo
+que en `eliminar` y además incluye `caminoSucesor`: en el caso `"dosHijos"`, los valores desde el hijo derecho del
+nodo hasta el sucesor inorden (el último es el sucesor); en los demás casos, `[]`.
 
 **`camino`**: arreglo con los **valores de los nodos ya existentes que se compararon**, en orden, desde la raíz:
 
@@ -161,11 +169,69 @@ centrarEnRaiz(contenedor, svg, disposicion)  // desplaza el área para mostrar l
 - **y**: nivel del nodo (la raíz es el nivel 1).
 - El `<svg>` mide exactamente lo que el dibujo; su contenedor `.lienzo` tiene `overflow: auto`.
 
+### Animador compartido (`js/animacion.js`)
+
+Solo cambia clases CSS sobre el dibujo actual: nunca modifica el árbol ni redibuja. Los nodos se buscan por
+`data-valor` en cada paso, así que marcar un valor que ya no está dibujado no hace nada (no falla).
+
+```js
+import { Animador, CLASES, DURACION_PASO } from "./animacion.js";
+const animador = new Animador(svg);
+
+// Lo más simple (recorridos de la Parte B): limpia y resalta los nodos uno por uno.
+const termino = await animador.resaltarSecuencia([50, 30, 40]);   // true, o false si se canceló
+
+// Una animación de varios pasos es una "sesión":
+const termino = await animador.ejecutar(async (a) => {
+  a.limpiar();
+  await a.secuencia(camino, { conAristas: true }); // resalta el camino nodo por nodo
+  a.marcar(valor, CLASES.encontrado);
+  await a.esperar();                                // pausa ajustada a la velocidad
+});
+
+animador.cancelar();         // cancela la sesión actual
+animador.limpiar();          // quita todos los resaltados
+animador.setVelocidad(2);    // de 0.25 a 4 (1 = normal)
+animador.ocupado;            // true mientras hay una sesión
+```
+
+| Herramienta de la sesión (`a`) | Qué hace |
+|---|---|
+| `secuencia(valores, { clase, conAristas, ms, seguir })` | Activa cada nodo en orden (`nodo-activo`) y lo deja con `clase` (por defecto `nodo-visitado`). `conAristas` resalta las líneas entre valores consecutivos; `seguir` desplaza el área para mantener visible el nodo |
+| `esperar(ms)` | Pausa (por defecto `DURACION_PASO` = 650 ms a velocidad 1) |
+| `marcar(valor, ...clases)` / `desmarcar(...)` | Agrega o quita clases a un nodo |
+| `marcarArista(padre, hijo)` | Resalta una arista |
+| `revelarPorNiveles(ms)` | Muestra el árbol nivel por nivel |
+| `moverValor(desde, hacia, ms)` | Una copia del nodo `desde` viaja a la posición de `hacia` |
+| `limpiar()` | Quita los resaltados y los elementos temporales |
+
+Garantías:
+- **Nunca hay dos animaciones a la vez:** `ejecutar` cancela la sesión anterior y espera a que termine antes de empezar.
+- **Cancelación segura:** después de cancelar, cualquier herramienta de esa sesión lanza `AnimacionCancelada` (que `ejecutar` atrapa y convierte en `false`), así una sesión vieja no puede tocar el dibujo.
+- **Velocidad:** afecta a las pausas (incluso a la que está en curso) y a las transiciones CSS mediante `--factor-velocidad`.
+- **`prefers-reduced-motion`:** el CSS quita escalas, apariciones y desplazamientos; los cambios de color se mantienen.
+
+Clases: `nodo-activo`, `nodo-visitado`, `nodo-encontrado`, `nodo-nuevo`, `nodo-eliminando`, `nodo-desvanecer`,
+`nodo-sucesor`, `nodo-reemplazo`, `nodo-oculto`, `arista-camino`, `arista-oculta`.
+
+### Interfaz (`js/ui.js`) e integración de la Parte B
+
+- Solo hay **una operación a la vez**: mientras corre, los botones se desactivan y se puede cancelar con el botón o con **Esc**.
+- La entrada se valida completa (`/^-?\d+$/` y rango) **antes** de convertirla a número; un campo vacío nunca se convierte en 0.
+- Cada operación anima primero sobre el dibujo actual, luego modifica el árbol en un único punto y redibuja. Si se cancela, se redibuja desde el árbol lógico.
+
+La Parte B se integra en `js/main.js` con dos líneas, usando su contrato actual (`OPCIONES` y `ejecutar(id, arbol, texto) → { ok, texto, nodos }`):
+
+```js
+import { ParteB } from "./ui-parteB.js";   // ui-parteB.js debe exportar ParteB
+interfaz.registrarParteB(ParteB);          // agrega sus botones al menú y anima `nodos` con el animador compartido
+```
+
 ### Contrato visual (dibujo y animación)
 
 - Cada nodo dibujado es `<g class="nodo" data-valor="X" data-nivel="N">` con un `<circle>` (posicionado con `cx`/`cy`) y un `<text>`. La raíz lleva además la clase `nodo-raiz`.
 - Cada arista es `<line class="arista" data-padre="P" data-hijo="H">`.
-- El `<g class="nodo">` no usa el atributo `transform`, así las animaciones pueden usar `transform: scale()` en CSS.
+- El `<g class="nodo">` no usa el atributo `transform` y contiene solo el círculo y su valor (la etiqueta "raíz" va aparte, en `<g class="etiquetas">`). Con `transform-box: fill-box` y `transform-origin: center`, cualquier `scale()` se aplica alrededor del centro del nodo.
 - Clases CSS de animación: `nodo-activo`, `nodo-visitado` (Parte B); `nodo-encontrado`, `nodo-nuevo`, `nodo-eliminando` (Parte A).
 - Opciones del menú: `ejecutar(id, arbol, valor) → { ok, texto, nodos }`.
 

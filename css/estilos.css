@@ -40,6 +40,27 @@
   --color-raiz-borde: var(--marron-calido);
   --color-arista: var(--marron-calido);
 
+  /* Estados de animación (tonos suaves de la misma paleta) */
+  --estado-activo: var(--rosa-antiguo);
+  --estado-activo-borde: var(--dorado-envejecido);
+  --estado-visitado: #E3E7DA;          /* salvia muy clara */
+  --estado-visitado-borde: #8C987C;    /* salvia oscura */
+  --estado-encontrado: var(--verde-salvia);   /* distinto del dorado de la raíz */
+  --estado-encontrado-borde: var(--verde-oscuro);
+  --estado-nuevo: #F1E4DA;             /* rosa antiguo muy claro */
+  --estado-nuevo-borde: var(--dorado-envejecido);
+  --estado-eliminando: #EBD3CB;        /* terracota muy clara */
+  --estado-eliminando-borde: var(--terracota);
+  --estado-sucesor: #F3E9D2;           /* dorado muy claro */
+  --estado-sucesor-borde: var(--dorado-envejecido);
+  --estado-camino: var(--dorado-envejecido);
+
+  /* Duraciones base (a velocidad 1). El animador cambia --factor-velocidad. */
+  --duracion-cambio: 320ms;
+  --duracion-aparecer: 520ms;
+  --duracion-mover: 780ms;
+  --curva-suave: cubic-bezier(0.25, 0.1, 0.25, 1);
+
   --fuente-titulos: Georgia, "Times New Roman", serif;
   --fuente-texto: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --radio-borde: 10px;
@@ -72,25 +93,7 @@ h1, h2 { font-family: var(--fuente-titulos); font-weight: normal; }
 .encabezado h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .encabezado p { margin: 4px 0 0; color: var(--color-texto-suave); }
 
-/* ---------- Controles (provisionales) ---------- */
-.controles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0 8px;
-}
-
-.controles input {
-  width: 8rem;
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--color-texto);
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-borde);
-}
-
+/* ---------- Botones ---------- */
 .boton {
   padding: 8px 14px;
   font: inherit;
@@ -109,9 +112,61 @@ input:focus-visible, .boton:focus-visible {
   outline-offset: 2px;
 }
 
-.mensaje { min-height: 1.5em; margin: 4px 0 12px; }
+.boton:disabled { opacity: 0.5; cursor: not-allowed; }
+.boton:disabled:hover { background: var(--color-superficie); }
+.boton-principal:disabled:hover { background: var(--color-acento); }
+.boton-cancelar:not(:disabled) { border-color: var(--terracota); color: var(--terracota); }
+
+/* ---------- Panel de controles ---------- */
+.panel {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 8px;
+  padding: 12px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-borde);
+}
+.fila-entrada, .fila-reproduccion, .grupo-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.fila-entrada input {
+  width: 8rem;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--color-texto);
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-borde);
+}
+.ayuda { color: var(--color-texto-suave); font-size: 0.85rem; }
+.menu { display: grid; gap: 8px; }
+.titulo-grupo {
+  min-width: 6.5rem;
+  color: var(--color-texto-suave);
+  font-family: var(--fuente-titulos);
+  font-style: italic;
+}
+@media (max-width: 600px) {
+  .titulo-grupo { flex-basis: 100%; }
+}
+.fila-reproduccion input[type="range"] { accent-color: var(--marron-calido); width: 9rem; }
+.fila-reproduccion output { min-width: 2.5rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Mensajes ---------- */
+.mensaje { min-height: 1.5em; margin: 8px 0 4px; }
 .mensaje.exito { color: var(--color-exito); }
 .mensaje.error { color: var(--color-error); }
+.mensaje.aviso { color: var(--marron-calido); }
+.camino {
+  margin: 0 0 10px;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---------- Área del árbol ----------
    El SVG mide lo mismo que el dibujo. Si es más grande que el
@@ -133,12 +188,26 @@ input:focus-visible, .boton:focus-visible {
   stroke: var(--color-arista);
   stroke-width: 2;
   stroke-opacity: 0.55;
+  transition: stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+              stroke-width calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+              opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+
+/* transform-box: fill-box + transform-origin: center hace que cualquier
+   scale() se aplique alrededor del centro del círculo de cada nodo. */
+.nodo {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+              opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
 }
 
 .nodo circle {
   fill: var(--color-nodo);
   stroke: var(--color-nodo-borde);
   stroke-width: 2.5;
+  transition: fill calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+              stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
 }
 
 .nodo text {
@@ -158,21 +227,96 @@ input:focus-visible, .boton:focus-visible {
   stroke-width: 3;
 }
 
-.nodo .etiqueta-raiz {
+.etiqueta-raiz {
   fill: var(--color-texto-suave);
   font-family: var(--fuente-titulos);
   font-size: 12px;
   font-style: italic;
-  font-weight: normal;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
+.etiquetas { transition: opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave); }
 
 .estado-vacio text { text-anchor: middle; dominant-baseline: central; }
 .estado-vacio-titulo { fill: var(--color-texto); font-family: var(--fuente-titulos); font-size: 20px; }
 .estado-vacio-ayuda { fill: var(--color-texto-suave); font-size: 14px; }
 
-/* Clases del contrato de animación (estilo provisional, sin animar todavía) */
-.nodo-activo circle { fill: var(--rosa-antiguo); stroke: var(--dorado-envejecido); }
-.nodo-visitado circle { fill: var(--verde-salvia); }
+/* ---------- Estados de animación (contrato de js/animacion.js) ----------
+   El orden importa: si un nodo tiene varias clases, gana la última regla. */
+.nodo-visitado circle { fill: var(--estado-visitado); stroke: var(--estado-visitado-borde); }
+
+.nodo-activo { transform: scale(1.14); }
+.nodo-activo circle { fill: var(--estado-activo); stroke: var(--estado-activo-borde); stroke-width: 3.5; }
+
+.nodo-encontrado { transform: scale(1.1); }
+.nodo-encontrado circle {
+  fill: var(--estado-encontrado);
+  stroke: var(--estado-encontrado-borde);
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 5px rgb(94 107 78 / 0.45));
+}
+
+.nodo-nuevo circle { fill: var(--estado-nuevo); stroke: var(--estado-nuevo-borde); stroke-width: 3.5; }
+.nodo-nuevo { animation: aparecer calc(var(--duracion-aparecer) / var(--factor-velocidad, 1)) var(--curva-suave) both; }
+
+.nodo-sucesor circle { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 3; stroke-dasharray: 5 3; }
+.nodo-reemplazo circle { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 3.5; }
+
+.nodo-eliminando circle { fill: var(--estado-eliminando); stroke: var(--estado-eliminando-borde); stroke-width: 3.5; }
+.nodo-desvanecer { opacity: 0; transform: scale(0.6); }
+
+.nodo-oculto, .arista-oculta { opacity: 0; }
+
+.arista-camino { stroke: var(--estado-camino); stroke-opacity: 1; stroke-width: 3.5; }
+
+/* Copia temporal que viaja al mover el valor del sucesor */
+.valor-en-movimiento { transition: transform calc(var(--duracion-mover) / var(--factor-velocidad, 1)) var(--curva-suave); }
+.valor-en-movimiento circle {
+  fill: var(--estado-sucesor);
+  stroke: var(--estado-sucesor-borde);
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 4px rgb(107 86 71 / 0.3));
+}
+.valor-en-movimiento text {
+  fill: var(--color-nodo-texto);
+  font-size: 14px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+@keyframes aparecer {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Movimiento reducido: sin escalas, desplazamientos ni apariciones animadas.
+   Los cambios de color se mantienen (informan sin mover nada). */
+@media (prefers-reduced-motion: reduce) {
+  .nodo, .nodo circle, .arista, .etiquetas, .valor-en-movimiento { transition: none; }
+  .nodo-nuevo { animation: none; }
+  .nodo-activo, .nodo-encontrado, .nodo-desvanecer { transform: none; }
+}
+
+/* ---------- Leyenda ---------- */
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-texto-suave);
+  font-size: 0.85rem;
+}
+.leyenda li { display: flex; align-items: center; gap: 6px; }
+.muestra { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; }
+.muestra-activo { background: var(--estado-activo); border-color: var(--estado-activo-borde); }
+.muestra-visitado { background: var(--estado-visitado); border-color: var(--estado-visitado-borde); }
+.muestra-encontrado { background: var(--estado-encontrado); border-color: var(--estado-encontrado-borde); }
+.muestra-nuevo { background: var(--estado-nuevo); border-color: var(--estado-nuevo-borde); }
+.muestra-eliminando { background: var(--estado-eliminando); border-color: var(--estado-eliminando-borde); }
+.muestra-sucesor { background: var(--estado-sucesor); border-color: var(--estado-sucesor-borde); border-style: dashed; }
 
 /* ---------- Pie ---------- */
 .pie { padding-top: 16px; padding-bottom: 24px;color: var(--color-texto-suave); font-size: 0.85rem; }

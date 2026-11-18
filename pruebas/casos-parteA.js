@@ -266,7 +266,30 @@ export function ejecutarPruebas() {
     comprobar("se puede volver a insertar", a.insertar(5), { insertado: true, camino: [], motivo: null });
   }
 
-  /* 16. Propiedad del ABB tras muchas modificaciones */
+  /* 16. Análisis de eliminación (no modifica el árbol) */
+  grupo = "Análisis de eliminación";
+  {
+    const a = crearArbol(BASE);
+    comprobar("dos hijos: se baja 40 → 35 hasta el sucesor", a.analizarEliminacion(30),
+      { eliminable: true, caso: "dosHijos", camino: [50, 30], reemplazo: 35, caminoSucesor: [40, 35], motivo: null });
+    comprobar("dos hijos: sucesor es el hijo derecho directo", a.analizarEliminacion(70),
+      { eliminable: true, caso: "dosHijos", camino: [50, 70], reemplazo: 80, caminoSucesor: [80], motivo: null });
+    comprobar("raíz con dos hijos", a.analizarEliminacion(50),
+      { eliminable: true, caso: "dosHijos", camino: [50], reemplazo: 60, caminoSucesor: [70, 60], motivo: null });
+    comprobar("hoja", a.analizarEliminacion(20),
+      { eliminable: true, caso: "hoja", camino: [50, 30, 20], reemplazo: null, caminoSucesor: [], motivo: null });
+    comprobar("un hijo derecho", a.analizarEliminacion(60),
+      { eliminable: true, caso: "unHijo", camino: [50, 70, 60], reemplazo: 65, caminoSucesor: [], motivo: null });
+    comprobar("inexistente", a.analizarEliminacion(99),
+      { eliminable: false, caso: null, camino: [50, 70, 80], reemplazo: null, caminoSucesor: [], motivo: "inexistente" });
+    comprobar("inválido", a.analizarEliminacion("7"),
+      { eliminable: false, caso: null, camino: [], reemplazo: null, caminoSucesor: [], motivo: "invalido" });
+    comprobar("árbol vacío", new ABB().analizarEliminacion(5),
+      { eliminable: false, caso: null, camino: [], reemplazo: null, caminoSucesor: [], motivo: "inexistente" });
+    comprobar("analizar no modifica el árbol", forma(a.raiz), FORMA_BASE);
+  }
+
+  /* 17. Propiedad del ABB tras muchas modificaciones */
   grupo = "Propiedad del ABB";
   {
     const aleatorio = crearAleatorio(2026);
@@ -275,6 +298,7 @@ export function ejecutarPruebas() {
     let operaciones = 0;
     let fallos = 0;
     let rechazosCorrectos = true;
+    let analisisCorrecto = true;
 
     for (let i = 0; i < 2000; i++) {
       const v = aleatorio(-60, 60);
@@ -284,8 +308,14 @@ export function ejecutarPruebas() {
         if (r.insertado === modelo.has(v)) rechazosCorrectos = false; // duplicado mal detectado
         modelo.add(v);
       } else {
+        const plan = a.analizarEliminacion(v); // debe predecir exactamente lo que hará eliminar
         const r = a.eliminar(v);
         if (r.eliminado !== modelo.has(v)) rechazosCorrectos = false; // inexistente mal detectado
+        if (plan.eliminable !== r.eliminado || plan.caso !== r.caso || plan.reemplazo !== r.reemplazo ||
+            JSON.stringify(plan.camino) !== JSON.stringify(r.camino) ||
+            (r.caso === "dosHijos" && plan.caminoSucesor.at(-1) !== r.reemplazo)) {
+          analisisCorrecto = false;
+        }
         modelo.delete(v);
       }
       operaciones++;
@@ -296,6 +326,7 @@ export function ejecutarPruebas() {
     }
     comprobar(`ABB válido e inorden correcto tras ${operaciones} operaciones`, fallos, 0);
     comprobar("duplicados e inexistentes detectados como en el modelo", rechazosCorrectos, true);
+    comprobar("analizarEliminacion predice cada eliminación", analisisCorrecto, true);
     const esperado = [...modelo].sort((x, y) => x - y);
     comprobar("mínimo y máximo coinciden con el modelo",
       [a.minimo(), a.maximo()], [esperado[0] ?? null, esperado[esperado.length - 1] ?? null]);

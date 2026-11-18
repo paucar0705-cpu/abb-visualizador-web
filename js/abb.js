@@ -135,6 +135,47 @@ export class ABB {
     return actual.valor;
   }
 
+  /* ---------- Analizar una eliminación (sin modificar nada) ----------
+     Dice qué pasaría si se eliminara `valor`, para que la interfaz
+     pueda mostrar el estado ANTERIOR antes de aplicar el cambio.
+     Devuelve { eliminable, caso, camino, reemplazo, caminoSucesor, motivo }:
+       - eliminable, caso, camino, reemplazo y motivo significan lo
+         mismo que en eliminar() (eliminable equivale a eliminado).
+       - caminoSucesor: solo en "dosHijos". Valores desde el hijo
+         derecho del nodo hasta el sucesor inorden, bajando siempre a
+         la izquierda (el último es el sucesor). En los demás casos, []. */
+  analizarEliminacion(valor) {
+    if (!esValorValido(valor)) {
+      return { eliminable: false, caso: null, camino: [], reemplazo: null, caminoSucesor: [], motivo: "invalido" };
+    }
+
+    const { actual, camino } = this.localizar(valor);
+    if (actual === null) {
+      return { eliminable: false, caso: null, camino, reemplazo: null, caminoSucesor: [], motivo: "inexistente" };
+    }
+
+    if (actual.izquierdo !== null && actual.derecho !== null) {
+      const caminoSucesor = [];
+      let sucesor = actual.derecho;
+      caminoSucesor.push(sucesor.valor);
+      while (sucesor.izquierdo !== null) {
+        sucesor = sucesor.izquierdo;
+        caminoSucesor.push(sucesor.valor);
+      }
+      return { eliminable: true, caso: "dosHijos", camino, reemplazo: sucesor.valor, caminoSucesor, motivo: null };
+    }
+
+    const hijo = actual.izquierdo !== null ? actual.izquierdo : actual.derecho;
+    return {
+      eliminable: true,
+      caso: hijo === null ? "hoja" : "unHijo",
+      camino,
+      reemplazo: hijo === null ? null : hijo.valor,
+      caminoSucesor: [],
+      motivo: null,
+    };
+  }
+
   /* ---------- Eliminar ----------
      1) Se busca el nodo guardando también a su padre.
      2) Según cuántos hijos tenga:
@@ -155,19 +196,10 @@ export class ABB {
     }
 
     // 1) Buscar el nodo y su padre
-    const camino = [];
-    let padre = null;
-    let actual = this.raiz;
-    while (actual !== null && actual.valor !== valor) {
-      camino.push(actual.valor);
-      padre = actual;
-      actual = valor < actual.valor ? actual.izquierdo : actual.derecho;
-    }
-
+    const { padre, actual, camino } = this.localizar(valor);
     if (actual === null) {
       return { eliminado: false, caso: null, camino, reemplazo: null, motivo: "inexistente" };
     }
-    camino.push(actual.valor);
 
     // 2a) Dos hijos: se reemplaza por el sucesor inorden
     if (actual.izquierdo !== null && actual.derecho !== null) {
@@ -191,6 +223,22 @@ export class ABB {
       return { eliminado: true, caso: "hoja", camino, reemplazo: null, motivo: null };
     }
     return { eliminado: true, caso: "unHijo", camino, reemplazo: hijo.valor, motivo: null };
+  }
+
+  // Auxiliar: baja desde la raíz buscando `valor` sin modificar nada.
+  // Devuelve { padre, actual, camino }; actual es null si no existe.
+  // El camino incluye al nodo encontrado (igual que buscar()).
+  localizar(valor) {
+    const camino = [];
+    let padre = null;
+    let actual = this.raiz;
+    while (actual !== null && actual.valor !== valor) {
+      camino.push(actual.valor);
+      padre = actual;
+      actual = valor < actual.valor ? actual.izquierdo : actual.derecho;
+    }
+    if (actual !== null) camino.push(actual.valor);
+    return { padre, actual, camino };
   }
 
   // Auxiliar de eliminar: hace que `padre` apunte a `nuevo` en lugar de `viejo`.

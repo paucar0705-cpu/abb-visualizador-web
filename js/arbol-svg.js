@@ -159,7 +159,11 @@ export function dibujarArbol(svg, arbol, medidas = MEDIDAS) {
 
   // Los nodos se posicionan con cx/cy (sin transform en el <g>) para que
   // las futuras animaciones puedan usar transform: scale() libremente.
+  // El <g class="nodo"> contiene solo el círculo y su valor: así su caja
+  // (transform-box: fill-box) es exactamente el círculo y cualquier
+  // transform: scale() se hace alrededor del centro del nodo.
   const grupoNodos = crear("g", { class: "nodos" });
+  const grupoEtiquetas = crear("g", { class: "etiquetas" });
   for (const n of disposicion.nodos) {
     const g = crear("g", {
       class: n.esRaiz ? "nodo nodo-raiz" : "nodo",
@@ -172,12 +176,12 @@ export function dibujarArbol(svg, arbol, medidas = MEDIDAS) {
       crear("text", { x: n.x, y: n.y }, String(n.valor))
     );
     if (n.esRaiz) {
-      g.append(crear("text", { x: n.x, y: n.y - medidas.radio - 9, class: "etiqueta-raiz" }, "raíz"));
+      grupoEtiquetas.append(crear("text", { x: n.x, y: n.y - medidas.radio - 9, class: "etiqueta-raiz" }, "raíz"));
     }
     grupoNodos.append(g);
   }
 
-  svg.append(grupoAristas, grupoNodos);
+  svg.append(grupoAristas, grupoNodos, grupoEtiquetas);
   const total = disposicion.nodos.length;
   svg.setAttribute("aria-label",
     `Árbol binario de búsqueda con ${total} nodo${total === 1 ? "" : "s"} y ` +

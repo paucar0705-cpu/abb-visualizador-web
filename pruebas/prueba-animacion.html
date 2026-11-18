@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Pruebas de animación</title>
+  <link rel="stylesheet" href="../css/estilos.css">
+  <style>
+    /* Solo para esta página de pruebas */
+    .resumen { font-weight: 600; padding: 8px 12px; border-radius: 6px; display: inline-block; }
+    .resumen.ok { background: #dcfce7; } .resumen.mal { background: #fee2e2; }
+    table { border-collapse: collapse; margin: 16px 0; font-size: .85rem; background: #fff; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+    .grupo td { background: var(--beige-calido); font-weight: 600; }
+    .ok { color: #1a7f37; } .mal { color: #c62828; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <h1>Pruebas del sistema de animaciones</h1>
+    <p>Abre esta página desde un servidor HTTP local. Las pruebas tardan unos segundos porque miden tiempos reales.</p>
+    <p id="resumen" class="resumen">Ejecutando…</p>
+    <div class="lienzo"><svg id="arbol" role="img"></svg></div>
+    <div style="overflow-x:auto">
+      <table id="tabla"><tr><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th></th></tr></table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { ABB } from "../js/abb.js";
+    import { dibujarArbol } from "../js/arbol-svg.js";
+    import { Animador, CLASES, AnimacionCancelada } from "../js/animacion.js";
+    import { ejecutarPruebas as pruebasDeEntrada } from "./casos-interfaz.js";
+
+    const resultados = [];
+    let grupo = "";
+    const comprobar = (nombre, obtenido, esperado) => {
+      const ok = JSON.stringify(obtenido) === JSON.stringify(esperado);
+      resultados.push({ grupo, nombre, esperado, obtenido, ok });
+    };
+    // Para tiempos: comprueba que el valor esté dentro de [min, max]
+    const entre = (nombre, valor, min, max) => {
+      const ok = valor >= min && valor <= max;
+      resultados.push({ grupo, nombre, esperado: `${min} a ${max}`, obtenido: Math.round(valor), ok });
+    };
+
+    const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+    const svg = document.getElementById("arbol");
+    const arbol = new ABB();
+    [50, 30, 70, 20, 40, 60, 80, 35, 45, 65].forEach((v) => arbol.insertar(v));
+    dibujarArbol(svg, arbol);
+    const anim = new Animador(svg);
+
+    const nodo = (v) => svg.querySelector(`.nodo[data-valor="${v}"]`);
+    const clases = (v) => [...nodo(v).classList].filter((c) => c !== "nodo" && c !== "nodo-raiz");
+    const conClase = (c) => [...svg.querySelectorAll("." + c)].length;
+    const centro = (v) => {
+      const r = nodo(v).querySelector("circle").getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, ancho: r.width };
+    };
+
+    // Registra en qué orden los nodos reciben "nodo-activo", y cuántos cambios de clase hay.
+    function grabar() {
+      const activos = [];
+      let cambios = 0;
+      // El registro solo trae el valor ANTERIOR de "class". El valor posterior a
+      // cada cambio es el anterior del siguiente cambio del mismo elemento (o el
+      // actual, si fue el último).
+      const obs = new MutationObserver((lista) => {
+        for (let i = 0; i < lista.length; i++) {
+          const m = lista[i];
+          cambios++;
+          const siguiente = lista.slice(i + 1).find((x) => x.target === m.target);
+          const despues = siguiente ? siguiente.oldValue : m.target.getAttribute("class");
+          const tenia = (m.oldValue || "").split(" ").includes(CLASES.activo);
+          const tiene = (despues || "").split(" ").includes(CLASES.activo);
+          if (tiene && !tenia) activos.push(Number(m.target.dataset.valor));
+        }
+      });
+      obs.observe(svg, { subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+      return { activos, get cambios() { return cambios; }, parar: () => { obs.takeRecords(); obs.disconnect(); } };
+    }
+
+    async function pruebas() {
+      grupo = "Secuencia";
+      {
+        anim.setVelocidad(4);
+        const g = grabar();
+        const ok = await anim.resaltarSecuencia([50, 30, 40, 45], { conAristas: true });
+        await espera(0);
+        g.parar();
+        comprobar("termina con true", ok, true);
+        comprobar("los nodos se activan en orden", g.activos, [50, 30, 40, 45]);
+        comprobar("al final todos quedan visitados", [50, 30, 40, 45].map((v) => clases(v)),
+          [[CLASES.visitado], [CLASES.visitado], [CLASES.visitado], [CLASES.visitado]]);
+        comprobar("ningún nodo queda activo", conClase(CLASES.activo), 0);
+        comprobar("se resaltan solo las 3 aristas del camino",
+          [...svg.querySelectorAll("." + CLASES.aristaCamino)].map((l) => `${l.dataset.padre}-${l.dataset.hijo}`).sort(),
+          ["30-40", "40-45", "50-30"]);
+        comprobar("no queda ocupado", anim.ocupado, false);
+      }
+
+      grupo = "Limpiar";
+      {
+        await anim.ejecutar((a) => a.moverValor(35, 30, 50));
+        anim.limpiar();
+        comprobar("no queda ninguna clase de animación", TODAS().map(conClase).reduce((a, b) => a + b, 0), 0);
+        comprobar("no quedan elementos temporales", svg.querySelectorAll(".animacion-temporal").length, 0);
+      }
+
+      grupo = "Cancelación";
+      {
+        anim.setVelocidad(1);
+        const promesa = anim.resaltarSecuencia([50, 30, 40, 45]);
+        await espera(150);
+        comprobar("ocupado durante la animación", anim.ocupado, true);
+        const inicio = performance.now();
+        anim.cancelar();
+        const resultado = await promesa;
+        entre("responde a la cancelación en menos de 60 ms", performance.now() - inicio, 0, 60);
+        comprobar("devuelve false", resultado, false);
+        const g = grabar();
+        await espera(900);
+        g.parar();
+        comprobar("después de cancelar no cambia ninguna clase", g.cambios, 0);
+        comprobar("no avanzó más allá del primer nodo", conClase(CLASES.visitado) + conClase(CLASES.activo) <= 1, true);
+        comprobar("ya no está ocupado", anim.ocupado, false);
+      }
+
+      grupo = "Sin animaciones superpuestas";
+      {
+        anim.setVelocidad(1);
+        const primera = anim.ejecutar(async (a) => { a.limpiar(); await a.secuencia([50, 70, 80]); });
+        await espera(800); // la primera ya marcó 50 y va en 70
+        const g = grabar();
+        const segunda = anim.resaltarSecuencia([50, 30, 20], { ms: 200 });
+        const [r1, r2] = await Promise.all([primera, segunda]);
+        g.parar();
+        comprobar("la primera se cancela y la segunda termina", [r1, r2], [false, true]);
+        comprobar("solo se activan los nodos de la segunda", g.activos, [50, 30, 20]);
+        comprobar("no quedan marcas de la primera (70 y 80)", [clases(70), clases(80)], [[], []]);
+
+        // Tres sesiones pedidas casi al mismo tiempo: nunca corren dos a la vez.
+        let activas = 0, maximo = 0;
+        const sesion = () => anim.ejecutar(async (a) => {
+          activas++; maximo = Math.max(maximo, activas);
+          try { await a.esperar(300); } finally { activas--; }
+        });
+        const r = await Promise.all([sesion(), sesion(), sesion()]);
+        comprobar("de tres llamadas seguidas solo termina la última", r, [false, false, true]);
+        comprobar("nunca hubo dos sesiones a la vez", maximo, 1);
+      }
+
+      grupo = "Sesiones viejas";
+      {
+        let viejas;
+        const p = anim.ejecutar(async (a) => { viejas = a; await a.esperar(5000); });
+        await espera(50);
+        anim.cancelar();
+        await p;
+        anim.limpiar();
+        let error = null;
+        try { viejas.marcar(50, "marca-de-sesion-vieja"); } catch (e) { error = e; }
+        comprobar("una herramienta de una sesión cancelada lanza AnimacionCancelada", error instanceof AnimacionCancelada, true);
+        comprobar("y no toca el dibujo", nodo(50).classList.contains("marca-de-sesion-vieja"), false);
+      }
+
+      grupo = "Velocidad";
+      {
+        const medir = async (velocidad, ms) => {
+          anim.setVelocidad(velocidad);
+          const t = performance.now();
+          await anim.ejecutar((a) => a.esperar(ms));
+          return performance.now() - t;
+        };
+        entre("esperar(400) a velocidad 1 ≈ 400 ms", await medir(1, 400), 380, 520);
+        entre("esperar(400) a velocidad 4 ≈ 100 ms", await medir(4, 400), 90, 190);
+        entre("esperar(400) a velocidad 0.5 ≈ 800 ms", await medir(0.5, 400), 780, 940);
+
+        anim.setVelocidad(1);
+        const t = performance.now();
+        const p = anim.ejecutar((a) => a.esperar(1000));
+        await espera(300);
+        anim.setVelocidad(4); // los 700 ms restantes pasan a ~175 ms
+        await p;
+        entre("cambiar la velocidad a mitad de una pausa la acelera (≈ 475 ms)", performance.now() - t, 430, 600);
+
+        anim.setVelocidad(10);
+        comprobar("velocidad máxima limitada a 4", anim.velocidad, 4);
+        anim.setVelocidad(0); anim.setVelocidad("abc"); anim.setVelocidad(-1);
+        comprobar("valores inválidos se ignoran", anim.velocidad, 4);
+        comprobar("variable CSS --factor-velocidad", svg.style.getPropertyValue("--factor-velocidad"), "4");
+        anim.setVelocidad(1);
+      }
+
+      grupo = "Transformaciones centradas";
+      {
+        anim.setVelocidad(1);
+        for (const [v, descripcion] of [[50, "raíz"], [20, "hoja"], [65, "nodo interno"]]) {
+          const antes = centro(v);
+          nodo(v).classList.add(CLASES.activo);
+          await espera(450); // la transición dura 320 ms a velocidad 1
+          const durante = centro(v);
+          nodo(v).classList.remove(CLASES.activo);
+          await espera(450);
+          comprobar(`${descripcion} ${v}: el centro no se mueve al escalar`,
+            Math.abs(antes.x - durante.x) < 0.5 && Math.abs(antes.y - durante.y) < 0.5, true);
+          entre(`${descripcion} ${v}: crece ×1.14 (en milésimas)`, (durante.ancho / antes.ancho) * 1000, 1130, 1150);
+        }
+        const antes = centro(40);
+        nodo(40).classList.add(CLASES.desvanecer);
+        await espera(450);
+        const despues = centro(40);
+        nodo(40).classList.remove(CLASES.desvanecer);
+        await espera(450);
+        comprobar("al desvanecerse se encoge hacia su centro",
+          Math.abs(antes.x - despues.x) < 0.5 && Math.abs(antes.y - despues.y) < 0.5 && despues.ancho < antes.ancho, true);
+      }
+
+      grupo = "Revelar por niveles y mover valor";
+      {
+        anim.setVelocidad(1);
+        const p = anim.ejecutar((a) => a.revelarPorNiveles(300));
+        await espera(80);
+        const visibles = [...svg.querySelectorAll(".nodo:not(.nodo-oculto)")].map((n) => n.dataset.valor);
+        comprobar("al inicio solo se ve el nivel 1", visibles, ["50"]);
+        comprobar("termina", await p, true);
+        comprobar("al final no queda nada oculto", conClase(CLASES.oculto) + conClase(CLASES.aristaOculta), 0);
+
+        const destino = centro(30);
+        await anim.ejecutar((a) => a.moverValor(35, 30, 900));
+        const copia = svg.querySelector(".valor-en-movimiento circle").getBoundingClientRect();
+        comprobar("la copia del 35 termina exactamente sobre el 30",
+          Math.abs(copia.left + copia.width / 2 - destino.x) < 1 && Math.abs(copia.top + copia.height / 2 - destino.y) < 1, true);
+        anim.limpiar();
+      }
+
+      grupo = "Robustez";
+      {
+        const ok = await anim.ejecutar(async (a) => {
+          a.marcar(999, CLASES.activo);   // no está dibujado
+          a.marcarArista(1, 2);
+          await a.secuencia([999], { ms: 10 });
+        });
+        comprobar("marcar un valor que no está dibujado no falla", ok, true);
+        let error = null;
+        try { await anim.ejecutar(() => { throw new Error("falla de prueba"); }); } catch (e) { error = e.message; }
+        comprobar("otros errores sí se propagan", error, "falla de prueba");
+        comprobar("y el animador queda libre", anim.ocupado, false);
+        comprobar("una secuencia vacía termina sin hacer nada", await anim.resaltarSecuencia([]), true);
+      }
+    }
+
+    function TODAS() { return Object.values(CLASES); }
+
+    try {
+      await pruebas();
+    } catch (e) {
+      resultados.push({ grupo: "Error", nombre: String(e), esperado: "sin errores", obtenido: e.stack, ok: false });
+    }
+    resultados.push(...pruebasDeEntrada());
+
+    // Tabla
+    const tabla = document.getElementById("tabla");
+    let actual = null;
+    for (const r of resultados) {
+      if (r.grupo !== actual) {
+        actual = r.grupo;
+        const f = tabla.insertRow(); f.className = "grupo";
+        const td = f.insertCell(); td.colSpan = 4; td.textContent = r.grupo;
+      }
+      const f = tabla.insertRow();
+      for (const v of [r.nombre, JSON.stringify(r.esperado), JSON.stringify(r.obtenido)]) f.insertCell().textContent = v;
+      const c = f.insertCell(); c.textContent = r.ok ? "✔" : "✘"; c.className = r.ok ? "ok" : "mal";
+    }
+    const fallos = resultados.filter((r) => !r.ok);
+    const resumen = document.getElementById("resumen");
+    resumen.textContent = `${resultados.length - fallos.length} de ${resultados.length} pruebas correctas`;
+    resumen.classList.add(fallos.length === 0 ? "ok" : "mal");
+    window.resumenPruebas = { total: resultados.length, fallos: fallos.map((r) => ({ grupo: r.grupo, nombre: r.nombre, esperado: r.esperado, obtenido: r.obtenido })) };
+  </script>
+</body>
+</html>
