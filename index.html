@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visualizador de ABB</title>
+  <meta name="description" content="Visualizador interactivo de un Árbol Binario de Búsqueda (ABB).">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="encabezado contenedor">
+    <h1>Visualizador de Árbol Binario de Búsqueda</h1>
+    <p>Actividad 2 · DSM 4A</p>
+  </header>
+
+  <main class="contenedor">
+    <!-- Controles PROVISIONALES para probar el dibujo.
+         El menú definitivo se construye en la fase 3 (js/ui.js). -->
+    <form id="formulario" class="controles" autocomplete="off">
+      <label for="valor">Valor</label>
+      <input id="valor" type="number" inputmode="numeric" step="1" min="-999" max="999" placeholder="-999 a 999">
+      <button type="submit" class="boton boton-principal">Insertar</button>
+      <button type="button" class="boton" id="btn-eliminar">Eliminar</button>
+      <button type="button" class="boton" id="btn-ejemplo">Árbol de ejemplo</button>
+      <button type="button" class="boton" id="btn-vaciar">Vaciar</button>
+    </form>
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+
+    <section class="lienzo" aria-label="Dibujo del árbol">
+      <svg id="arbol" role="img" aria-label="Árbol binario de búsqueda"></svg>
+    </section>
+  </main>
+
+  <footer class="pie contenedor">
+    Enteros entre -999 y 999 · sin duplicados · la raíz es el nivel 1
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

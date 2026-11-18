@@ -47,20 +47,22 @@ También funciona con la extensión *Live Server* de VS Code y con GitHub Pages.
 ## Estructura de archivos
 
 ```
-index.html               A   Página principal (pendiente)
-css/estilos.css          A   Diseño y clases de animación (pendiente)
+index.html               A   Página principal (controles provisionales)
+css/estilos.css          A   Paleta, estilos del árbol y clases de animación
 js/
   nodo.js                A   export class Nodo
   abb.js                 A   export class ABB (+ VALOR_MINIMO, VALOR_MAXIMO, esValorValido)
   abb-parteB.js          B   Métodos de la Parte B sobre ABB.prototype
-  arbol-svg.js           A   Cálculo de posiciones y dibujo SVG (pendiente)
+  arbol-svg.js           A   Cálculo de posiciones y dibujo SVG
   animacion.js           A+B Animador compartido (pendiente)
   ui.js                  A   Interfaz de la Parte A y armado del menú (pendiente)
   ui-parteB.js           B   Opciones de la Parte B para el menú
-  main.js                A   Punto de entrada (pendiente)
+  main.js                A   Punto de entrada
 pruebas/
   casos-parteA.js        A   Casos de prueba de la clase ABB (sin DOM)
   prueba-parteA.html     A   Muestra los resultados de casos-parteA.js
+  casos-grafica.js       A   Escenarios y pruebas del cálculo de posiciones (sin DOM)
+  prueba-grafica.html    A   Dibuja los escenarios y prueba el SVG generado
   prueba-parteB.html     B
   abb-temporal.js        B   ABB provisional; se elimina al integrar js/abb.js
 ```
@@ -145,9 +147,25 @@ nivelDe(valor)      // → number (raíz = 1) | -1 si no existe
 // + tres operaciones libres (por acordar)
 ```
 
+### Dibujo (`js/arbol-svg.js`), Persona A
+
+```js
+import { dibujarArbol, calcularPosiciones, centrarEnRaiz, MEDIDAS } from "./arbol-svg.js";
+
+calcularPosiciones(raiz)        // → { nodos, aristas, ancho, alto, niveles }  (sin DOM)
+dibujarArbol(svg, arbol)        // redibuja todo el SVG y devuelve lo mismo que calcularPosiciones
+centrarEnRaiz(contenedor, svg, disposicion)  // desplaza el área para mostrar la raíz
+```
+
+- **x**: posición del nodo en el recorrido inorden (una columna por nodo, así nunca se enciman).
+- **y**: nivel del nodo (la raíz es el nivel 1).
+- El `<svg>` mide exactamente lo que el dibujo; su contenedor `.lienzo` tiene `overflow: auto`.
+
 ### Contrato visual (dibujo y animación)
 
-- Cada nodo dibujado es `<g class="nodo" data-valor="X">…</g>`.
+- Cada nodo dibujado es `<g class="nodo" data-valor="X" data-nivel="N">` con un `<circle>` (posicionado con `cx`/`cy`) y un `<text>`. La raíz lleva además la clase `nodo-raiz`.
+- Cada arista es `<line class="arista" data-padre="P" data-hijo="H">`.
+- El `<g class="nodo">` no usa el atributo `transform`, así las animaciones pueden usar `transform: scale()` en CSS.
 - Clases CSS de animación: `nodo-activo`, `nodo-visitado` (Parte B); `nodo-encontrado`, `nodo-nuevo`, `nodo-eliminando` (Parte A).
 - Opciones del menú: `ejecutar(id, arbol, valor) → { ok, texto, nodos }`.
 
