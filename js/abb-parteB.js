@@ -2,24 +2,25 @@
    ABB - Parte B: Recorridos, niveles y operaciones libres
    Autora: Paola Cardeña Koyoc (DSM 4A)
 
-   Este archivo AGREGA métodos a la clase ABB que programa
-   la Persona A (L). Se carga DESPUÉS de abb.js:
-     <script src="js/abb.js"></script>
-     <script src="js/abb-parteB.js"></script>
+   Este módulo AGREGA métodos a la clase ABB de la Persona A
+   (js/abb.js). Basta con importarlo una vez, por ejemplo en
+   main.js, para que todos los árboles tengan estos métodos:
+     import "./abb-parteB.js";
 
-   Supone esta estructura (interfaz acordada en binas):
-     class Nodo { valor; izquierdo; derecho; }
-     class ABB  { raiz; }
+   Estructura que usa (definida en nodo.js y abb.js):
+     Nodo { valor, izquierdo, derecho }
+     ABB  { raiz }
 
    Todos los métodos DEVUELVEN datos (arreglos, números u
-   objetos); la interfaz (ui.js) decide cómo mostrarlos o
-   animarlos.
+   objetos) y no usan el DOM; la interfaz decide cómo
+   mostrarlos o animarlos.
    ========================================================= */
 
-// Aviso por si el archivo se carga antes que abb.js
-if (typeof ABB === "undefined") {
-  console.error("abb-parteB.js: la clase ABB no existe. Carga js/abb.js antes que este archivo.");
-}
+import { ABB } from "./abb.js";
+
+// La raíz está en el nivel 1 (convención acordada en el README).
+// Si el maestro la contara como nivel 0, solo hay que cambiar este valor.
+export const NIVEL_RAIZ = 1;
 
 /* ---------- 5. Recorrido en anchura (por niveles) ---------- */
 // Usa una cola (FIFO): visita la raíz, luego sus hijos, luego los nietos...
@@ -94,10 +95,7 @@ ABB.prototype.numeroNiveles = function () {
 /* ---------- 10. Nivel de un nodo específico ---------- */
 // Baja desde la raíz como en una búsqueda: si el valor es menor va a la
 // izquierda, si es mayor a la derecha, y cuenta cuántos pasos dio.
-// La raíz está en el nivel 0. Devuelve -1 si el valor no existe.
-// (Si el maestro cuenta la raíz como nivel 1, cambiar NIVEL_RAIZ a 1.)
-const NIVEL_RAIZ = 0;
-
+// La raíz está en el nivel 1. Devuelve -1 si el valor no existe.
 ABB.prototype.nivelDe = function (valor) {
   let actual = this.raiz;
   let nivel = NIVEL_RAIZ;
@@ -113,20 +111,7 @@ ABB.prototype.nivelDe = function (valor) {
    OPERACIONES LIBRES (3 de la Persona B)
    ========================================================= */
 
-/* ---------- Libre 1: Valor mínimo y máximo ---------- */
-// Por la propiedad del ABB:
-//   mínimo = el nodo más a la izquierda; máximo = el más a la derecha.
-// Devuelve null si el árbol está vacío.
-ABB.prototype.minimoYMaximo = function () {
-  if (!this.raiz) return null;
-  let min = this.raiz;
-  while (min.izquierdo) min = min.izquierdo;
-  let max = this.raiz;
-  while (max.derecho) max = max.derecho;
-  return { minimo: min.valor, maximo: max.valor };
-};
-
-/* ---------- Libre 2: Contar nodos totales y nodos hoja ---------- */
+/* ---------- Libre 1: Contar nodos totales y nodos hoja ---------- */
 // Recorre todo el árbol contando nodos. Una hoja es un nodo sin hijos;
 // además de contarlas se guardan sus valores para poder resaltarlas.
 ABB.prototype.contarNodosYHojas = function () {
@@ -141,6 +126,23 @@ ABB.prototype.contarNodosYHojas = function () {
   };
   recorrer(this.raiz);
   return { totalNodos: total, totalHojas: hojas.length, hojas };
+};
+
+/* ---------- Libre 2: Suma de los valores ---------- */
+// Recorre el árbol por niveles (reusa recorridoAnchura) y va acumulando
+// los valores. También calcula el promedio. Árbol vacío: suma 0,
+// cantidad 0 y promedio null (no se puede dividir entre 0).
+ABB.prototype.sumaValores = function () {
+  const valores = this.recorridoAnchura();
+  let suma = 0;
+  for (const v of valores) suma += v;
+  const cantidad = valores.length;
+  return {
+    suma,
+    cantidad,
+    promedio: cantidad === 0 ? null : suma / cantidad,
+    valores,                              // en el orden en que se sumaron
+  };
 };
 
 /* ---------- Libre 3: Camino de la raíz a un nodo ---------- */
