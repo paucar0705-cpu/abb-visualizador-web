@@ -1,23 +1,19 @@
 /* =========================================================
-   ABB - Parte B: opciones del menú y animación de nodos
+   ABB - Parte B: opciones del menú
    Autora: Paola Cardeña Koyoc (DSM 4A)
 
-   Módulo que conecta mis operaciones con la interfaz de L.
-   No dibuja el árbol: usa el dibujo SVG de la Persona A.
+   Módulo que conecta mis operaciones con la interfaz de la
+   Persona A. No dibuja ni anima: solo dice QUÉ mostrar.
 
-   Contrato visual (README):
-     - Cada nodo dibujado es <g class="nodo" data-valor="X">…</g>
-     - Mientras se anima, el nodo lleva la clase "nodo-activo";
-       al pasar al siguiente queda con "nodo-visitado".
+   Se integra en main.js con dos líneas:
+     import * as ParteB from "./ui-parteB.js";
+     interfaz.registrarParteB(ParteB);
 
-   Uso desde ui.js:
-     import { OPCIONES, ejecutar, animar } from "./ui-parteB.js";
-     const r = ejecutar("preorden", arbol);
-     mostrarMensaje(r.texto);   // función de L
-     animar(r.nodos);           // ilumina los nodos en orden
-
-   Nota: cuando exista js/animacion.js (animador compartido),
-   animar() se cambiará para usarlo; ejecutar() no cambia.
+   registrarParteB (en ui.js) crea un botón por cada elemento de
+   OPCIONES. Al pulsarlo llama a ejecutar(id, arbol, valor),
+   muestra r.texto como mensaje y le pasa r.nodos al animador
+   compartido (animacion.js), que ilumina esos nodos en orden con
+   las clases "nodo-activo" y "nodo-visitado".
    ========================================================= */
 
 import { esValorValido, VALOR_MINIMO, VALOR_MAXIMO } from "./abb.js";
@@ -32,9 +28,9 @@ export const OPCIONES = [
   { id: "inorden",   numero: 8,  nombre: "Recorrido en inorden",               pideValor: false },
   { id: "niveles",   numero: 9,  nombre: "Número de niveles del árbol",        pideValor: false },
   { id: "nivelDe",   numero: 10, nombre: "Nivel de un nodo",                   pideValor: true  },
-  { id: "contar",    numero: 11, nombre: "Contar nodos y hojas",               pideValor: false },
-  { id: "suma",      numero: 12, nombre: "Suma de los valores",                pideValor: false },
-  { id: "camino",    numero: 13, nombre: "Camino de la raíz a un nodo",        pideValor: true  },
+  { id: "contar",    numero: 13, nombre: "Contar nodos y hojas",               pideValor: false },
+  { id: "suma",      numero: 14, nombre: "Suma de los valores",                pideValor: false },
+  { id: "camino",    numero: 15, nombre: "Camino de la raíz a un nodo",        pideValor: true  },
 ];
 
 /* ---------- Ejecutar una opción ---------- */
@@ -120,40 +116,4 @@ function aEntero(valor) {
   if (valor === undefined || valor === null || String(valor).trim() === "") return null;
   const n = Number(valor);
   return esValorValido(n) ? n : null;
-}
-
-/* ---------- Animación de nodos ---------- */
-let velocidad = 700;        // milisegundos que dura iluminado cada nodo
-let animacionActual = 0;    // sirve para cancelar una animación anterior
-
-export function setVelocidad(ms) {
-  velocidad = ms;
-}
-
-// Busca el elemento dibujado de un nodo por su valor
-function elementoDe(valor) {
-  return document.querySelector(`.nodo[data-valor="${CSS.escape(String(valor))}"]`);
-}
-
-// Quita las clases de animación de todos los nodos y cancela la animación en curso
-export function limpiar() {
-  animacionActual++;
-  document.querySelectorAll(".nodo-activo, .nodo-visitado").forEach((el) =>
-    el.classList.remove("nodo-activo", "nodo-visitado")
-  );
-}
-
-// Ilumina los nodos uno por uno, en el orden del arreglo recibido.
-// Devuelve una promesa que termina cuando acaba la animación.
-export async function animar(valores, ms = velocidad) {
-  limpiar();
-  const id = animacionActual;
-  const espera = (t) => new Promise((ok) => setTimeout(ok, t));
-  for (const v of valores) {
-    if (id !== animacionActual) return;   // otra animación la canceló
-    const el = elementoDe(v);
-    if (el) el.classList.add("nodo-activo");
-    await espera(ms);
-    if (el) el.classList.replace("nodo-activo", "nodo-visitado");
-  }
 }
