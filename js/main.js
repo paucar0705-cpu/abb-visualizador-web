@@ -2,13 +2,13 @@
    Punto de entrada de la aplicación
    Persona A
 
-   Solo reúne los elementos de la página y crea la interfaz.
-   La Parte B se integrará aquí con dos líneas:
-     import * as ParteB from "./ui-parteB.js";   // exporta OPCIONES y ejecutar
-     interfaz.registrarParteB(ParteB);
+   Solo reúne los elementos de la página, crea la interfaz y
+   registra las opciones de la Parte B (recorridos, niveles y
+   operaciones adicionales) en el menú.
    ========================================================= */
 
 import { crearInterfaz } from "./ui.js";
+import * as ParteB from "./ui-parteB.js"; // Parte B: exporta OPCIONES y ejecutar
 
 const $ = (id) => document.getElementById(id);
 
@@ -33,6 +33,10 @@ const interfaz = crearInterfaz({
     texto: $("zoom-texto"),
   },
 });
+
+// Agrega los botones de la Parte B; sus resultados se animan con el
+// animador compartido.
+interfaz.registrarParteB(ParteB);
 
 // Solo para las pruebas automáticas (index.html?pruebas): permite
 // comparar el dibujo con el árbol lógico desde la consola.

@@ -34,7 +34,7 @@ También funciona con la extensión *Live Server* de VS Code y con GitHub Pages.
 | Representación gráfica (SVG) | Preorden, inorden y postorden |
 | Búsqueda con camino resaltado | Número de niveles |
 | Inserción con animación | Nivel de un nodo |
-| Eliminación (hoja, un hijo, dos hijos) | Tres operaciones libres (por acordar) |
+| Eliminación (hoja, un hijo, dos hijos) | Operaciones libres: contar nodos y hojas, suma de los valores y camino de la raíz a un nodo |
 | Operaciones libres: mínimo y máximo | |
 | Diseño general, menú, colores y efectos | |
 
@@ -158,8 +158,16 @@ arbol.eliminar(30);  // { eliminado: true, caso: "dosHijos", camino: [50, 30], r
 recorridoAnchura()  preorden()  inorden()  postorden()   // → number[]
 numeroNiveles()     // → number (vacío = 0, solo raíz = 1)
 nivelDe(valor)      // → number (raíz = 1) | -1 si no existe
-// + tres operaciones libres (por acordar)
+
+// Operaciones libres
+contarNodosYHojas() // → { totalNodos, totalHojas, hojas: number[] }
+sumaValores()       // → { suma, cantidad, promedio (null si está vacío), valores: number[] }
+caminoA(valor)      // → number[] desde la raíz hasta el valor | null si no existe
 ```
+
+`js/ui-parteB.js` exporta `OPCIONES` (id, número del menú, nombre y si pide valor) y
+`ejecutar(id, arbol, valor) → { ok, texto, nodos }`. Numeración del menú: 5–10 son las
+operaciones obligatorias de la Parte B y 13–15 sus operaciones libres (11 y 12 son mínimo y máximo de la Parte A).
 
 ### Dibujo (`js/arbol-svg.js`), Persona A
 
@@ -229,9 +237,7 @@ Clases: `nodo-activo`, `nodo-visitado`, `nodo-encontrado`, `nodo-nuevo`, `nodo-e
 - **Zoom** (barra en la esquina del árbol): alejar, acercar (25 % a 200 %), ajustar el árbol completo al área y volver a 100 % centrando la raíz. Solo cambia el tamaño en pantalla del `<svg>` (`width`/`height`); el `viewBox`, las coordenadas y las animaciones no cambian, y el zoom se conserva al redibujar.
 
 El menú tiene cuatro secciones: **Operaciones**, **Recorridos**, **Consultas** y **Operaciones adicionales**.
-Mientras la Parte B no esté integrada, sus secciones muestran solo una nota (sin botones).
-
-La Parte B se integra en `js/main.js` con dos líneas, usando su contrato actual (`OPCIONES` y `ejecutar(id, arbol, texto) → { ok, texto, nodos }`):
+La Parte B está integrada en `js/main.js` con dos líneas, usando su contrato (`OPCIONES` y `ejecutar(id, arbol, texto) → { ok, texto, nodos }`):
 
 ```js
 import * as ParteB from "./ui-parteB.js";  // el módulo exporta OPCIONES y ejecutar
