@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Pruebas gráficas</title>
+  <link rel="stylesheet" href="../css/estilos.css">
+  <style>
+    /* Solo para esta página de pruebas */
+    .resumen { font-weight: 600; padding: 8px 12px; border-radius: 6px; display: inline-block; }
+    .resumen.ok { background: #dcfce7; } .resumen.mal { background: #fee2e2; }
+    .escenarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+    .escenario h2 { font-size: 1.05rem; margin: 0 0 6px; }
+    .escenario .lienzo { min-height: 160px; max-height: 360px; }
+    .escenario .estado { font-size: .85rem; margin: 4px 0 0; }
+    table { border-collapse: collapse; margin: 16px 0; font-size: .85rem; background: #fff; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+    .grupo td { background: var(--piedra); font-weight: 600; }
+    .ok { color: #1a7f37; } .mal { color: #c62828; }
+  </style>
+</head>
+<body>
+  <main class="contenedor">
+    <h1>Pruebas de la representación gráfica</h1>
+    <p>Abre esta página desde un servidor HTTP local (ver README).</p>
+    <p id="resumen" class="resumen">Ejecutando…</p>
+
+    <div id="escenarios" class="escenarios"></div>
+
+    <h2>Resultados</h2>
+    <div style="overflow-x:auto">
+      <table id="tabla"><tr><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th></th></tr></table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { dibujarArbol, centrarEnRaiz } from "../js/arbol-svg.js";
+    import { ESCENARIOS, ejecutarPruebas } from "./casos-grafica.js";
+
+    const resultados = ejecutarPruebas(); // pruebas de cálculo (sin DOM)
+    const contenedor = document.getElementById("escenarios");
+    const dibujosHechos = []; // resultado de dibujarArbol de cada escenario
+
+    // Pruebas sobre el SVG real dibujado en cada escenario.
+    for (const escenario of ESCENARIOS) {
+      const arbol = escenario.crear();
+      const tarjeta = document.createElement("section");
+      tarjeta.className = "escenario";
+      tarjeta.innerHTML = `<h2></h2><div class="lienzo"><svg role="img"></svg></div><p class="estado"></p>`;
+      tarjeta.querySelector("h2").textContent = escenario.nombre;
+      contenedor.append(tarjeta);
+
+      const svg = tarjeta.querySelector("svg");
+      const d = dibujarArbol(svg, arbol);
+      dibujosHechos.push(d);
+      const grupo = `${escenario.nombre} (SVG)`;
+      const comprobar = (nombre, obtenido, esperado) => {
+        const ok = JSON.stringify(obtenido) === JSON.stringify(esperado);
+        resultados.push({ grupo, nombre, esperado, obtenido, ok });
+      };
+
+      const nodos = [...svg.querySelectorAll("g.nodo")];
+      const lineas = [...svg.querySelectorAll(".arista")];
+      // Cada arista es una curva "M x1 y1 C … x2 y2": se leen su primer y su último punto.
+      const extremos = (arista) => {
+        const n = arista.getAttribute("d").match(/-?\d+(\.\d+)?/g).map(Number);
+        return { x1: n[0], y1: n[1], x2: n.at(-2), y2: n.at(-1) };
+      };
+      const valoresEsperados = d.nodos.map((p) => String(p.valor)).sort();
+
+      comprobar("un <g class=nodo> por nodo", nodos.length, d.nodos.length);
+      comprobar("data-valor de todos los nodos", nodos.map((g) => g.dataset.valor).sort(), valoresEsperados);
+      comprobar("el texto muestra el valor", nodos.every((g) => g.querySelector("text").textContent === g.dataset.valor), true);
+      comprobar("una sola .nodo-raiz y es la raíz",
+        [...svg.querySelectorAll(".nodo-raiz")].map((g) => g.dataset.valor),
+        arbol.estaVacio() ? [] : [String(arbol.raiz.valor)]);
+      comprobar("una rama (arista) por cada hijo", lineas.length, d.aristas.length);
+      comprobar("cada rama va del centro del padre al del hijo", lineas.every((l) => {
+        const cp = svg.querySelector(`[data-valor="${l.dataset.padre}"] .disco`);
+        const ch = svg.querySelector(`[data-valor="${l.dataset.hijo}"] .disco`);
+        const e = extremos(l);
+        return cp && ch &&
+          e.x1 === Number(cp.getAttribute("cx")) && e.y1 === Number(cp.getAttribute("cy")) &&
+          e.x2 === Number(ch.getAttribute("cx")) && e.y2 === Number(ch.getAttribute("cy"));
+      }), true);
+      comprobar("el primer círculo de cada nodo es el disco", nodos.every((g) => g.querySelector("circle").classList.contains("disco")), true);
+      comprobar("estado vacío solo si no hay nodos", svg.querySelector(".estado-vacio") !== null, arbol.estaVacio());
+      if (!arbol.estaVacio()) {
+        comprobar("viewBox = tamaño calculado", svg.getAttribute("viewBox"), `0 0 ${d.ancho} ${d.alto}`);
+        // El navegador calcula el tamaño real del dibujo: debe caber en el viewBox.
+        const caja = svg.querySelector(".nodos").getBBox();
+        comprobar("el dibujo cabe en el viewBox (getBBox)",
+          caja.x >= 0 && caja.y >= 0 && caja.x + caja.width <= d.ancho && caja.y + caja.height <= d.alto, true);
+      }
+
+      const lienzo = tarjeta.querySelector(".lienzo");
+      const desborda = lienzo.scrollWidth > lienzo.clientWidth || lienzo.scrollHeight > lienzo.clientHeight;
+      tarjeta.querySelector(".estado").textContent =
+        `${d.nodos.length} nodos · ${d.niveles} niveles · ${d.ancho}×${d.alto}px` + (desborda ? " · con desplazamiento" : "");
+      tarjeta.dataset.desborda = desborda;
+    }
+
+    // Desplazamiento: el escenario de varios niveles no cabe y debe poder desplazarse.
+    {
+      const tarjeta = [...contenedor.children].at(-1);
+      const lienzo = tarjeta.querySelector(".lienzo");
+      const antes = lienzo.scrollLeft;
+      lienzo.scrollLeft = 10000;
+      lienzo.scrollTop = 10000;
+      const ok = tarjeta.dataset.desborda === "true" && lienzo.scrollLeft > antes && lienzo.scrollTop > 0;
+      resultados.push({ grupo: "Desplazamiento", nombre: "el área se puede desplazar cuando el árbol no cabe", esperado: true, obtenido: ok, ok });
+    }
+
+    // Para verlos mejor, cada escenario muestra su raíz centrada.
+    for (const [i, tarjeta] of [...contenedor.children].entries()) {
+      const svg = tarjeta.querySelector("svg");
+      centrarEnRaiz(tarjeta.querySelector(".lienzo"), svg, dibujosHechos[i]);
+    }
+
+    // Tabla de resultados
+    const tabla = document.getElementById("tabla");
+    let grupoActual = null;
+    for (const r of resultados) {
+      if (r.grupo !== grupoActual) {
+        grupoActual = r.grupo;
+        const f = tabla.insertRow(); f.className = "grupo";
+        const td = f.insertCell(); td.colSpan = 4; td.textContent = r.grupo;
+      }
+      const f = tabla.insertRow();
+      for (const v of [r.nombre, JSON.stringify(r.esperado), JSON.stringify(r.obtenido)]) f.insertCell().textContent = v;
+      const c = f.insertCell(); c.textContent = r.ok ? "✔" : "✘"; c.className = r.ok ? "ok" : "mal";
+    }
+    const fallos = resultados.filter((r) => !r.ok);
+    const resumen = document.getElementById("resumen");
+    resumen.textContent = `${resultados.length - fallos.length} de ${resultados.length} pruebas correctas`;
+    resumen.classList.add(fallos.length === 0 ? "ok" : "mal");
+    resumen.dataset.fallos = fallos.map((r) => `${r.grupo}: ${r.nombre}`).join(" | ");
+    window.resumenPruebas = { total: resultados.length, fallos: fallos.length };
+  </script>
+</body>
+</html>
