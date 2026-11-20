@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pruebas Parte B</title>
+  <!-- Estilo mínimo solo para leer los resultados; no es el diseño final. -->
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #f6f7fb; color: #222; }
+    h1 { font-size: 1.3rem; }
+    #resumen { font-weight: 600; padding: 8px 12px; border-radius: 6px; display: inline-block; }
+    #resumen.ok { background: #dcfce7; } #resumen.mal { background: #fee2e2; }
+    .tabla { overflow-x: auto; }
+    table { border-collapse: collapse; margin-top: 16px; font-size: .85rem; background: #fff; }
+    td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; vertical-align: top; }
+    td code { white-space: pre-wrap; word-break: break-word; }
+    .grupo td { background: #ece9ff; font-weight: 600; }
+    .ok { color: #1a7f37; } .mal { color: #c62828; }
+  </style>
+</head>
+<body>
+  <h1>Pruebas de la Parte B (recorridos, niveles y operaciones libres)</h1>
+  <p>Esta página usa módulos ES: ábrela desde un servidor HTTP local (ver README), no con doble clic.
+    Las animaciones se prueban en la aplicación (<code>index.html</code>).</p>
+  <div id="resumen">Ejecutando…</div>
+  <div class="tabla">
+    <table id="tabla">
+      <tr><th>Prueba</th><th>Esperado</th><th>Obtenido</th><th></th></tr>
+    </table>
+  </div>
+
+  <script type="module">
+    import { ejecutarPruebas } from "./casos-parteB.js";
+
+    const tabla = document.getElementById("tabla");
+    const resumen = document.getElementById("resumen");
+
+    // Muestra un valor como código (textContent evita interpretar HTML)
+    function codigo(valor) {
+      const c = document.createElement("code");
+      c.textContent = valor === undefined ? "undefined" : JSON.stringify(valor);
+      return c;
+    }
+
+    const resultados = ejecutarPruebas();
+    let grupoActual = null;
+    for (const r of resultados) {
+      if (r.grupo !== grupoActual) {
+        grupoActual = r.grupo;
+        const filaGrupo = tabla.insertRow();
+        filaGrupo.className = "grupo";
+        const td = filaGrupo.insertCell();
+        td.colSpan = 4;
+        td.textContent = r.grupo;
+      }
+      const fila = tabla.insertRow();
+      fila.insertCell().textContent = r.nombre;
+      fila.insertCell().appendChild(codigo(r.esperado));
+      fila.insertCell().appendChild(codigo(r.obtenido));
+      const marca = fila.insertCell();
+      marca.textContent = r.ok ? "✔" : "✘";
+      marca.className = r.ok ? "ok" : "mal";
+    }
+
+    const fallos = resultados.filter((r) => !r.ok).length;
+    resumen.textContent = `${resultados.length - fallos} de ${resultados.length} pruebas correctas`;
+    resumen.className = fallos === 0 ? "ok" : "mal";
+    window.resumenPruebas = { total: resultados.length, fallos };
+  </script>
+</body>
+</html>
