@@ -12,7 +12,7 @@
     .resumen.ok { background: #dcfce7; } .resumen.mal { background: #fee2e2; }
     table { border-collapse: collapse; margin: 16px 0; font-size: .85rem; background: #fff; }
     td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
-    .grupo td { background: var(--beige-calido); font-weight: 600; }
+    .grupo td { background: var(--piedra); font-weight: 600; }
     .ok { color: #1a7f37; } .mal { color: #c62828; }
   </style>
 </head>
@@ -200,22 +200,23 @@
         for (const [v, descripcion] of [[50, "raíz"], [20, "hoja"], [65, "nodo interno"]]) {
           const antes = centro(v);
           nodo(v).classList.add(CLASES.activo);
-          await espera(450); // la transición dura 320 ms a velocidad 1
+          await espera(650); // la transición dura 380 ms a velocidad 1
           const durante = centro(v);
           nodo(v).classList.remove(CLASES.activo);
-          await espera(450);
+          await espera(650);
           comprobar(`${descripcion} ${v}: el centro no se mueve al escalar`,
             Math.abs(antes.x - durante.x) < 0.5 && Math.abs(antes.y - durante.y) < 0.5, true);
           entre(`${descripcion} ${v}: crece ×1.14 (en milésimas)`, (durante.ancho / antes.ancho) * 1000, 1130, 1150);
         }
         const antes = centro(40);
         nodo(40).classList.add(CLASES.desvanecer);
-        await espera(450);
+        await espera(900); // ~610 ms a velocidad 1
         const despues = centro(40);
         nodo(40).classList.remove(CLASES.desvanecer);
-        await espera(450);
-        comprobar("al desvanecerse se encoge hacia su centro",
-          Math.abs(antes.x - despues.x) < 0.5 && Math.abs(antes.y - despues.y) < 0.5 && despues.ancho < antes.ancho, true);
+        await espera(900);
+        // Se encoge alrededor de su centro (x igual) y desciende 6 px a propósito, como un pétalo.
+        comprobar("al desvanecerse se encoge hacia su centro y solo desciende 6 px",
+          Math.abs(antes.x - despues.x) < 0.5 && Math.abs(despues.y - antes.y - 6) < 0.5 && despues.ancho < antes.ancho, true);
       }
 
       grupo = "Revelar por niveles y mover valor";

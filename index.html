@@ -4,55 +4,139 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
-  <title>Visualizador de ABB</title>
-  <meta name="description" content="Visualizador interactivo de un Árbol Binario de Búsqueda (ABB).">
+  <title>Visualizador ABB · Árbol binario de búsqueda</title>
+  <meta name="description" content="Visualizador interactivo de un árbol binario de búsqueda (ABB): inserción, búsqueda, eliminación y recorridos animados.">
+  <!-- Tipografías: si no cargan, css/estilos.css usa alternativas locales. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Source+Sans+3:wght@400;600;700&display=swap">
   <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
-  <header class="encabezado contenedor">
-    <h1>Visualizador de Árbol Binario de Búsqueda</h1>
-    <p>Actividad 2 · DSM 4A</p>
+  <!-- Íconos lineales (SVG en línea, sin imágenes). -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Íconos (24×24, trazo heredado del botón) -->
+      <symbol id="i-insertar" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-3.6 2.4-6 6-6 0 3.6-2.4 6-6 6Z"/><path d="M12 15c0-3-2-5-5-5 0 3 2 5 5 5Z"/></symbol>
+      <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></symbol>
+      <symbol id="i-eliminar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8.5 12h7"/></symbol>
+      <symbol id="i-mostrar" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="17" r="2"/><circle cx="18" cy="17" r="2"/><path d="M11 6.8 7 15.2M13 6.8l4 8.4"/></symbol>
+      <symbol id="i-minimo" viewBox="0 0 24 24"><path d="M17 7 7 17"/><path d="M7 10v7h7"/></symbol>
+      <symbol id="i-maximo" viewBox="0 0 24 24"><path d="m7 7 10 10"/><path d="M17 10v7h-7"/></symbol>
+      <symbol id="i-ejemplo" viewBox="0 0 24 24"><path d="M12 7c-2-1.5-4.5-2-8-2v12c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2V5c-3.5 0-6 .5-8 2Z"/><path d="M12 7v12"/></symbol>
+      <symbol id="i-vaciar" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="m7 16 8.5-8.5a2.1 2.1 0 0 1 3 3L10 19H7v-3Z"/></symbol>
+      <symbol id="i-cancelar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="m9 9 6 6m0-6-6 6"/></symbol>
+      <symbol id="i-velocidad" viewBox="0 0 24 24"><path d="M7 4h10M7 20h10"/><path d="M8 4c0 4 8 4.5 8 8s-8 4-8 8M16 4c0 4-8 4.5-8 8s8 4 8 8"/></symbol>
+      <symbol id="i-recorrido" viewBox="0 0 24 24"><circle cx="5" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="18" r="1.6"/><path d="M6.4 7.2 10.6 10.8M13.4 13.2l4.2 3.6"/></symbol>
+      <symbol id="i-consulta" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 19v-8m5 8V6m5 13v-5"/></symbol>
+      <symbol id="i-adicional" viewBox="0 0 24 24"><path d="M12 4v4m0 8v4M4 12h4m8 0h4"/><circle cx="12" cy="12" r="2"/></symbol>
+      <symbol id="i-acercar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5M10.5 8v5"/></symbol>
+      <symbol id="i-alejar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5"/></symbol>
+      <symbol id="i-ajustar" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+      <symbol id="i-centrar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="1.6"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="cabecera">
+    <div class="marca-app">
+      <!-- Distintivo: sello con un pequeño árbol de tres nodos -->
+      <svg class="distintivo" viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+        <circle cx="22" cy="22" r="20.5" fill="#F7F3EC" stroke="#B59A6A" stroke-width="1"/>
+        <circle cx="22" cy="22" r="17.5" fill="none" stroke="#B59A6A" stroke-width=".6" stroke-dasharray="1.2 2"/>
+        <path d="M22 16.5 15.5 26.5M22 16.5 28.5 26.5" fill="none" stroke="#6F775B" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="22" cy="14.5" r="4" fill="#6F775B"/>
+        <circle cx="14.5" cy="28.5" r="3.4" fill="#FBF8F2" stroke="#6F775B" stroke-width="1.5"/>
+        <circle cx="29.5" cy="28.5" r="3.4" fill="#D9B2A6" stroke="#C97A5B" stroke-width="1.5"/>
+      </svg>
+      <div>
+        <h1>Visualizador <span>ABB</span></h1>
+        <p class="subtitulo">Árbol binario de búsqueda</p>
+      </div>
+    </div>
+    <p class="cabecera-nota">Actividad 2 · DSM 4A</p>
   </header>
 
-  <main class="contenedor">
-    <section class="panel" aria-label="Controles">
-      <form id="formulario" class="fila-entrada" autocomplete="off">
+  <main class="taller">
+    <aside class="panel" aria-label="Controles">
+      <form id="formulario" class="campo-valor" autocomplete="off" aria-labelledby="titulo-entrada">
+        <h3 class="titulo-seccion" id="titulo-entrada">Entrada</h3>
         <label for="valor">Valor</label>
         <input id="valor" type="number" inputmode="numeric" step="1" min="-999" max="999"
-               placeholder="-999 a 999" aria-describedby="ayuda-valor">
-        <span id="ayuda-valor" class="ayuda">Enteros de -999 a 999. Enter = Insertar.</span>
+               placeholder="−999 a 999" aria-describedby="ayuda-valor">
+        <p id="ayuda-valor" class="ayuda">Número entero. <kbd>Enter</kbd> inserta.</p>
       </form>
 
-      <!-- Los botones se generan desde js/ui.js (y luego la Parte B agrega los suyos). -->
-      <div id="menu" class="menu"></div>
+      <!-- Las secciones y sus botones se generan desde js/ui.js. -->
+      <nav id="menu" class="menu" aria-label="Operaciones del árbol"></nav>
 
-      <div class="fila-reproduccion">
-        <label for="velocidad">Velocidad</label>
-        <input id="velocidad" type="range" min="0.5" max="3" step="0.5" value="1">
-        <output id="velocidad-texto" for="velocidad">1×</output>
-        <button type="button" id="btn-cancelar" class="boton boton-cancelar" disabled>Cancelar (Esc)</button>
+      <div class="reproduccion">
+        <h3 class="titulo-seccion">Reproducción</h3>
+        <div class="fila-velocidad">
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-velocidad"/></svg>
+          <label for="velocidad">Velocidad</label>
+          <input id="velocidad" type="range" min="0.5" max="3" step="0.5" value="1">
+          <output id="velocidad-texto" for="velocidad">1×</output>
+        </div>
+        <button type="button" id="btn-cancelar" class="boton boton-cancelar" disabled>
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-cancelar"/></svg>
+          <span>Cancelar animación <kbd>Esc</kbd></span>
+        </button>
+      </div>
+    </aside>
+
+    <section class="escena" aria-labelledby="titulo-escena">
+
+      <div class="escena-cabecera">
+        <div>
+          <h2 id="titulo-escena">El árbol</h2>
+          <p id="resumen-arbol" class="resumen-arbol">Sin elementos</p>
+        </div>
+        <div id="utilidades" class="utilidades" role="group" aria-label="Utilidades"></div>
+      </div>
+
+      <div class="cartela">
+        <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+        <p id="camino" class="camino" hidden></p>
+      </div>
+
+      <div class="marco-lienzo">
+        <div class="barra-lienzo">
+          <p class="rotulo-lienzo">Vista del árbol</p>
+          <!-- Zoom: solo cambia el tamaño en pantalla; el dibujo y sus coordenadas no cambian. -->
+          <div class="zoom" role="group" aria-label="Zoom del árbol">
+            <button type="button" class="boton-zoom" id="zoom-alejar" aria-label="Alejar" title="Alejar">
+              <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-alejar"/></svg>
+            </button>
+            <output id="zoom-texto" class="zoom-texto" for="zoom-alejar zoom-acercar" aria-live="polite">100%</output>
+            <button type="button" class="boton-zoom" id="zoom-acercar" aria-label="Acercar" title="Acercar">
+              <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-acercar"/></svg>
+            </button>
+            <button type="button" class="boton-zoom" id="zoom-ajustar" aria-label="Ajustar el árbol al área" title="Ajustar al área">
+              <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-ajustar"/></svg>
+            </button>
+            <button type="button" class="boton-zoom" id="zoom-centrar" aria-label="Tamaño real y centrar en la raíz" title="100% y centrar en la raíz">
+              <svg class="icono" aria-hidden="true" focusable="false"><use href="#i-centrar"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="lienzo" class="lienzo" aria-label="Dibujo del árbol" tabindex="0">
+          <svg id="arbol" role="img" aria-label="Árbol binario de búsqueda"></svg>
+        </div>
+        <ul class="leyenda" aria-label="Significado de los colores">
+          <li><span class="muestra muestra-activo"></span>Comparando</li>
+          <li><span class="muestra muestra-visitado"></span>Visitado</li>
+          <li><span class="muestra muestra-encontrado"></span>Encontrado</li>
+          <li><span class="muestra muestra-nuevo"></span>Nuevo</li>
+          <li><span class="muestra muestra-eliminando"></span>Se elimina</li>
+          <li><span class="muestra muestra-sucesor"></span>Sucesor / reemplazo</li>
+          <li><span class="muestra muestra-raiz"></span>Raíz</li>
+        </ul>
       </div>
     </section>
-
-    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
-    <p id="camino" class="camino" hidden></p>
-
-    <section id="lienzo" class="lienzo" aria-label="Dibujo del árbol">
-      <svg id="arbol" role="img" aria-label="Árbol binario de búsqueda"></svg>
-    </section>
-
-    <ul class="leyenda" aria-label="Significado de los colores">
-      <li><span class="muestra muestra-activo"></span>Comparando</li>
-      <li><span class="muestra muestra-visitado"></span>Visitado</li>
-      <li><span class="muestra muestra-encontrado"></span>Encontrado</li>
-      <li><span class="muestra muestra-nuevo"></span>Nuevo</li>
-      <li><span class="muestra muestra-eliminando"></span>Se elimina</li>
-      <li><span class="muestra muestra-sucesor"></span>Sucesor / reemplazo</li>
-    </ul>
   </main>
 
-  <footer class="pie contenedor">
-    Enteros entre -999 y 999 · sin duplicados · la raíz es el nivel 1
+  <footer class="pie">
+    <p><span class="marca">Visualizador ABB</span> · Enteros de −999 a 999, sin duplicados · La raíz está en el nivel 1</p>
   </footer>
 
   <script type="module" src="js/main.js"></script>

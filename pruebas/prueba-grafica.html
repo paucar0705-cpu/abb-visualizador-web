@@ -16,7 +16,7 @@
     .escenario .estado { font-size: .85rem; margin: 4px 0 0; }
     table { border-collapse: collapse; margin: 16px 0; font-size: .85rem; background: #fff; }
     td, th { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
-    .grupo td { background: var(--beige-calido); font-weight: 600; }
+    .grupo td { background: var(--piedra); font-weight: 600; }
     .ok { color: #1a7f37; } .mal { color: #c62828; }
   </style>
 </head>
@@ -61,7 +61,12 @@
       };
 
       const nodos = [...svg.querySelectorAll("g.nodo")];
-      const lineas = [...svg.querySelectorAll("line.arista")];
+      const lineas = [...svg.querySelectorAll(".arista")];
+      // Cada arista es una curva "M x1 y1 C … x2 y2": se leen su primer y su último punto.
+      const extremos = (arista) => {
+        const n = arista.getAttribute("d").match(/-?\d+(\.\d+)?/g).map(Number);
+        return { x1: n[0], y1: n[1], x2: n.at(-2), y2: n.at(-1) };
+      };
       const valoresEsperados = d.nodos.map((p) => String(p.valor)).sort();
 
       comprobar("un <g class=nodo> por nodo", nodos.length, d.nodos.length);
@@ -70,14 +75,16 @@
       comprobar("una sola .nodo-raiz y es la raíz",
         [...svg.querySelectorAll(".nodo-raiz")].map((g) => g.dataset.valor),
         arbol.estaVacio() ? [] : [String(arbol.raiz.valor)]);
-      comprobar("una línea por arista", lineas.length, d.aristas.length);
-      comprobar("cada línea va del centro del padre al del hijo", lineas.every((l) => {
-        const cp = svg.querySelector(`[data-valor="${l.dataset.padre}"] circle`);
-        const ch = svg.querySelector(`[data-valor="${l.dataset.hijo}"] circle`);
+      comprobar("una rama (arista) por cada hijo", lineas.length, d.aristas.length);
+      comprobar("cada rama va del centro del padre al del hijo", lineas.every((l) => {
+        const cp = svg.querySelector(`[data-valor="${l.dataset.padre}"] .disco`);
+        const ch = svg.querySelector(`[data-valor="${l.dataset.hijo}"] .disco`);
+        const e = extremos(l);
         return cp && ch &&
-          l.getAttribute("x1") === cp.getAttribute("cx") && l.getAttribute("y1") === cp.getAttribute("cy") &&
-          l.getAttribute("x2") === ch.getAttribute("cx") && l.getAttribute("y2") === ch.getAttribute("cy");
+          e.x1 === Number(cp.getAttribute("cx")) && e.y1 === Number(cp.getAttribute("cy")) &&
+          e.x2 === Number(ch.getAttribute("cx")) && e.y2 === Number(ch.getAttribute("cy"));
       }), true);
+      comprobar("el primer círculo de cada nodo es el disco", nodos.every((g) => g.querySelector("circle").classList.contains("disco")), true);
       comprobar("estado vacío solo si no hay nodos", svg.querySelector(".estado-vacio") !== null, arbol.estaVacio());
       if (!arbol.estaVacio()) {
         comprobar("viewBox = tamaño calculado", svg.getAttribute("viewBox"), `0 0 ${d.ancho} ${d.alto}`);

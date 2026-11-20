@@ -198,10 +198,23 @@ export class Animador {
     const reducirMovimiento = () =>
       typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Mantiene visible un nodo dentro del área con desplazamiento.
+    // Mantiene visible un nodo desplazando SOLO el área que contiene al SVG
+    // (nunca la página), para que en celulares el árbol no "salte" de la vista.
     const seguirNodo = (valor) => {
       const circulo = this.nodo(valor)?.querySelector("circle");
-      circulo?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reducirMovimiento() ? "auto" : "smooth" });
+      const area = this.svg.parentElement;
+      if (!circulo || !area) return;
+      if (area.scrollWidth <= area.clientWidth && area.scrollHeight <= area.clientHeight) return;
+      const c = circulo.getBoundingClientRect();
+      const a = area.getBoundingClientRect();
+      const margen = 28;
+      const dx = c.left < a.left + margen ? c.left - a.left - margen
+        : c.right > a.left + area.clientWidth - margen ? c.right - (a.left + area.clientWidth) + margen : 0;
+      const dy = c.top < a.top + margen ? c.top - a.top - margen
+        : c.bottom > a.top + area.clientHeight - margen ? c.bottom - (a.top + area.clientHeight) + margen : 0;
+      if (dx !== 0 || dy !== 0) {
+        area.scrollBy({ left: dx, top: dy, behavior: reducirMovimiento() ? "auto" : "smooth" });
+      }
     };
 
     const secuencia = async (valores, { clase = CLASES.visitado, conAristas = false, ms = DURACION_PASO, seguir = true } = {}) => {

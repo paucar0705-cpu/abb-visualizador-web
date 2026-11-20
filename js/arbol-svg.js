@@ -20,9 +20,11 @@
 
    Contrato visual (para animaciones y la Parte B):
      <g class="nodo [nodo-raiz]" data-valor="X" data-nivel="N">
-       <circle cx cy r/> <text>X</text>
+       <circle class="disco" cx cy r/>     (primer círculo: el nodo)
+       <circle class="anillo" .../>        (doble línea decorativa)
+       <text>X</text>
      </g>
-     <line class="arista" data-padre="P" data-hijo="H"/>
+     <path class="arista" data-padre="P" data-hijo="H" d="M x1 y1 C … x2 y2"/>
    ========================================================= */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -123,12 +125,15 @@ function dibujarVacio(svg) {
    horizontalmente y se vea la parte de arriba del árbol. Útil cuando
    el árbol es más ancho que el área visible. */
 export function centrarEnRaiz(contenedor, svg, disposicion) {
-  const raiz = disposicion.nodos.find((n) => n.esRaiz);
+  const raiz = disposicion?.nodos.find((n) => n.esRaiz);
   if (!raiz) return;
+  // Si el SVG se muestra con zoom, su tamaño en pantalla no coincide con el
+  // viewBox: se usa la escala real para ubicar la raíz.
+  const caja = svg.getBoundingClientRect();
+  const escala = disposicion.ancho > 0 ? caja.width / disposicion.ancho : 1;
   // Posición del SVG dentro del contenido desplazable del contenedor
-  const desplazamientoSvg = svg.getBoundingClientRect().left -
-    contenedor.getBoundingClientRect().left + contenedor.scrollLeft;
-  contenedor.scrollLeft = desplazamientoSvg + raiz.x - contenedor.clientWidth / 2;
+  const desplazamientoSvg = caja.left - contenedor.getBoundingClientRect().left + contenedor.scrollLeft;
+  contenedor.scrollLeft = desplazamientoSvg + raiz.x * escala - contenedor.clientWidth / 2;
   contenedor.scrollTop = 0;
 }
 
@@ -147,13 +152,16 @@ export function dibujarArbol(svg, arbol, medidas = MEDIDAS) {
   ajustarTamano(svg, disposicion.ancho, disposicion.alto);
 
   // Primero las aristas, para que los círculos queden encima de las líneas.
+  // Cada arista es una curva suave (como una rama) que sale vertical del
+  // padre y llega vertical al hijo; empieza y termina en sus centros.
   const grupoAristas = crear("g", { class: "aristas" });
   for (const a of disposicion.aristas) {
-    grupoAristas.append(crear("line", {
+    const medio = (a.y1 + a.y2) / 2;
+    grupoAristas.append(crear("path", {
       class: "arista",
       "data-padre": a.padre,
       "data-hijo": a.hijo,
-      x1: a.x1, y1: a.y1, x2: a.x2, y2: a.y2,
+      d: `M ${a.x1} ${a.y1} C ${a.x1} ${medio}, ${a.x2} ${medio}, ${a.x2} ${a.y2}`,
     }));
   }
 
@@ -172,7 +180,9 @@ export function dibujarArbol(svg, arbol, medidas = MEDIDAS) {
     });
     g.append(
       crear("title", {}, n.esRaiz ? `Raíz: ${n.valor}` : `Nodo ${n.valor} (nivel ${n.nivel})`),
-      crear("circle", { cx: n.x, cy: n.y, r: medidas.radio }),
+      crear("circle", { class: "disco", cx: n.x, cy: n.y, r: medidas.radio }),
+      // Doble línea ornamental (decorativa). pathLength permite dibujarla al brotar.
+      crear("circle", { class: "anillo", cx: n.x, cy: n.y, r: medidas.radio - 4, pathLength: 100 }),
       crear("text", { x: n.x, y: n.y }, String(n.valor))
     );
     if (n.esRaiz) {

@@ -1,9 +1,15 @@
-# Visualizador de ABB - Actividad 2 (DSM 4A)
+# Visualizador ABB · Árbol binario de búsqueda
 
-Aplicación web para visualizar un **Árbol Binario de Búsqueda (ABB)**: inserción, búsqueda,
-eliminación, recorridos y otras operaciones, con representación gráfica en SVG.
+Visualizador de un **Árbol Binario de Búsqueda (ABB)** · Actividad 2 (DSM 4A).
+Inserción, búsqueda, eliminación, recorridos y otras operaciones, con representación gráfica y animada en SVG.
 
 Tecnologías: HTML5, CSS3, JavaScript vanilla con **módulos ES** y **SVG**. Sin frameworks ni dependencias.
+Las tipografías se cargan desde Google Fonts: Fraunces (serif editorial) para los títulos y Source Sans 3 para
+la interfaz; si no están disponibles, se usan alternativas locales (Palatino, Georgia, Segoe UI, system-ui).
+Los íconos y el sello del encabezado son SVG en línea dentro de `index.html`, sin imágenes.
+Estética editorial retro suave: fondo #ECE8DF, paneles #F7F3EC y #E4DED2, lienzo #FBF8F2; oliva #6F775B para la
+estructura, coral #C97A5B y rosa viejo #D9B2A6 como acentos, borgoña #7B4A5A y dorado mate #B59A6A para detalles.
+Los grupos del panel se numeran (01 Entrada … 06 Reproducción) y los tamaños de letra son responsivos (`clamp`).
 
 ## Cómo ejecutarlo
 
@@ -47,7 +53,7 @@ También funciona con la extensión *Live Server* de VS Code y con GitHub Pages.
 ## Estructura de archivos
 
 ```
-index.html               A   Página principal (panel de controles, mensajes, área del árbol y leyenda)
+index.html               A   Encabezado, panel de controles, escena del árbol, leyenda e íconos SVG
 css/estilos.css          A   Paleta, estilos del árbol, estados y animaciones
 js/
   nodo.js                A   export class Nodo
@@ -219,18 +225,30 @@ Clases: `nodo-activo`, `nodo-visitado`, `nodo-encontrado`, `nodo-nuevo`, `nodo-e
 - Solo hay **una operación a la vez**: mientras corre, los botones se desactivan y se puede cancelar con el botón o con **Esc**.
 - La entrada se valida completa (`/^-?\d+$/` y rango) **antes** de convertirla a número; un campo vacío nunca se convierte en 0.
 - Cada operación anima primero sobre el dibujo actual, luego modifica el árbol en un único punto y redibuja. Si se cancela, se redibuja desde el árbol lógico.
+- Al seguir un nodo durante una animación se desplaza **solo el área del árbol**, nunca la página. En celulares, al iniciar una operación la página se coloca en la nota de resultados, con el árbol debajo.
+- **Zoom** (barra en la esquina del árbol): alejar, acercar (25 % a 200 %), ajustar el árbol completo al área y volver a 100 % centrando la raíz. Solo cambia el tamaño en pantalla del `<svg>` (`width`/`height`); el `viewBox`, las coordenadas y las animaciones no cambian, y el zoom se conserva al redibujar.
+
+El menú tiene cuatro secciones: **Operaciones**, **Recorridos**, **Consultas** y **Operaciones adicionales**.
+Mientras la Parte B no esté integrada, sus secciones muestran solo una nota (sin botones).
 
 La Parte B se integra en `js/main.js` con dos líneas, usando su contrato actual (`OPCIONES` y `ejecutar(id, arbol, texto) → { ok, texto, nodos }`):
 
 ```js
-import { ParteB } from "./ui-parteB.js";   // ui-parteB.js debe exportar ParteB
-interfaz.registrarParteB(ParteB);          // agrega sus botones al menú y anima `nodos` con el animador compartido
+import * as ParteB from "./ui-parteB.js";  // el módulo exporta OPCIONES y ejecutar
+interfaz.registrarParteB(ParteB);          // agrega sus botones y anima `nodos` con el animador compartido
 ```
+
+Cada opción va a su sección según su `id` (`anchura`, `preorden`, `inorden`, `postorden` → Recorridos;
+`niveles`, `nivelDe` → Consultas; el resto → Operaciones adicionales). Una opción puede indicar su propia
+`categoria` (`"recorridos"`, `"consultas"` o `"adicionales"`).
+
+Los botones de la Parte B muestran un nombre corto (por ejemplo «Por niveles», «Preorden», «Nivel de nodo», «Suma»)
+y conservan el nombre completo de `OPCIONES` como descripción emergente. Una opción puede traer su propio `nombreCorto`.
 
 ### Contrato visual (dibujo y animación)
 
-- Cada nodo dibujado es `<g class="nodo" data-valor="X" data-nivel="N">` con un `<circle>` (posicionado con `cx`/`cy`) y un `<text>`. La raíz lleva además la clase `nodo-raiz`.
-- Cada arista es `<line class="arista" data-padre="P" data-hijo="H">`.
+- Cada nodo dibujado es `<g class="nodo" data-valor="X" data-nivel="N">` con `<circle class="disco">` (el nodo, posicionado con `cx`/`cy`; siempre es el primer círculo), `<circle class="anillo">` (doble línea decorativa) y un `<text>`. La raíz lleva además la clase `nodo-raiz`.
+- Cada arista es una curva suave, como una rama: `<path class="arista" data-padre="P" data-hijo="H" d="M x1 y1 C … x2 y2">`, que empieza en el centro del padre y termina en el del hijo.
 - El `<g class="nodo">` no usa el atributo `transform` y contiene solo el círculo y su valor (la etiqueta "raíz" va aparte, en `<g class="etiquetas">`). Con `transform-box: fill-box` y `transform-origin: center`, cualquier `scale()` se aplica alrededor del centro del nodo.
 - Clases CSS de animación: `nodo-activo`, `nodo-visitado` (Parte B); `nodo-encontrado`, `nodo-nuevo`, `nodo-eliminando` (Parte A).
 - Opciones del menú: `ejecutar(id, arbol, valor) → { ok, texto, nodos }`.

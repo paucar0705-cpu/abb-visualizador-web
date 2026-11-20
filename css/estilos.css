@@ -1,322 +1,730 @@
 /* =========================================================
-   Estilos del Visualizador de ABB
-   Persona A
+   Visualizador ABB · Árbol binario de búsqueda
+   Estilos (Persona A)
 
-   Dirección artística (preliminar): jardín antiguo, pintura
-   romántica; vintage, botánico, delicado y elegante.
-   La decoración definitiva se hará en la fase de diseño; aquí
-   solo hay estructura, legibilidad y los colores base.
+   Dirección: editorial retro suave, académica. Papel cálido,
+   filetes finos, grupos numerados como en un índice impreso,
+   serif con carácter (Fraunces) para los títulos y una sans
+   muy legible (Source Sans 3) para todo lo funcional.
+   El color se usa con moderación: oliva para la estructura,
+   coral y rosa viejo como acentos, borgoña y dorado mate
+   para detalles puntuales.
+
+   Índice
+     1. Variables (paleta, tipografía, estados, duraciones)
+     2. Base y escala tipográfica
+     3. Encabezado (cabecera tipo masthead)
+     4. Disposición general y paneles
+     5. Panel de controles (grupos numerados)
+     6. Área del árbol (cartela, marco con barra, lienzo y leyenda)
+     7. Árbol SVG y estados de animación
+     8. Pie
+     9. Adaptación a tablet y celular
+    10. Movimiento reducido
    ========================================================= */
 
+/* ---------- 1. Variables ---------- */
 :root {
-  /* Paleta preliminar */
-  --marfil: #F6F1E7;
-  --beige-calido: #E7D8C9;
-  --rosa-antiguo: #D8C1B2;
-  --verde-salvia: #A6B098;
-  --marron-calido: #6B5647;
-  --dorado-envejecido: #C6A777;
+  /* Paleta */
+  --fondo: #ECE8DF;
+  --panel: #F7F3EC;
+  --panel-2: #E4DED2;          /* panel secundario: barras y notas */
+  --panel-3: #F1ECE3;          /* intermedio para franjas del marco */
+  --lienzo: #FBF8F2;
+  --texto: #2E2A26;            /* 11.6:1 sobre el fondo */
+  --texto-suave: #5F5A52;      /* 6.2:1 sobre el panel · 5.1:1 sobre el panel secundario */
+  --oliva: #6F775B;            /* estructura · texto blanco 4.7:1 */
+  --oliva-oscuro: #5E654B;     /* hover del botón principal · 6.1:1 */
+  --oliva-texto: #5A6148;      /* texto oliva · 5.9:1 */
+  --salvia: #AAB29A;
+  --salvia-tenue: #E3E6DA;
+  --coral: #C97A5B;
+  --coral-texto: #9A4F33;      /* errores y cancelar · 5.4:1 */
+  --rosa: #D9B2A6;
+  --rosa-tenue: #F4E6E0;
+  --borgona: #7B4A5A;          /* énfasis · 6.4:1 sobre el panel */
+  --dorado: #B59A6A;           /* filetes y detalles */
+  --dorado-texto: #7A6539;     /* números de grupo · 5.1:1 */
+  --linea: #D3CBBC;            /* bordes finos */
+  --linea-suave: #E2DBCF;
+  --linea-fuerte: #BFB5A3;
 
-  /* Tonos derivados (para contraste suficiente en texto) */
-  --marron-oscuro: #4A3B30;
-  --papel: #FFFDF8;
-  --verde-oscuro: #5E6B4E;
-  --terracota: #9A4A3F;
+  /* Tipografía */
+  --fuente-titulos: "Fraunces", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --fuente-texto: "Source Sans 3", "Source Sans Pro", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  /* Escala responsiva: crece con el ancho de pantalla dentro de límites legibles */
+  --t-base: clamp(0.97rem, 0.93rem + 0.2vw, 1.0625rem);
+  --t-pequeno: clamp(0.84rem, 0.82rem + 0.1vw, 0.9rem);
+  --t-boton: clamp(0.94rem, 0.91rem + 0.12vw, 0.99rem);
+  --t-grupo: clamp(1.02rem, 0.96rem + 0.25vw, 1.14rem);
+  --t-h2: clamp(1.4rem, 1.2rem + 0.8vw, 1.8rem);
+  --t-h1: clamp(1.6rem, 1.15rem + 1.7vw, 2.35rem);
 
-  /* Roles: el resto del CSS usa estos nombres, no los colores directos */
-  --color-fondo: var(--marfil);
-  --color-superficie: var(--papel);
-  --color-borde: var(--beige-calido);
-  --color-texto: var(--marron-oscuro);
-  --color-texto-suave: var(--marron-calido);
-  --color-acento: var(--dorado-envejecido);
-  --color-exito: var(--verde-oscuro);
-  --color-error: var(--terracota);
+  /* Nodos */
+  --nodo-relleno: #FFFDF8;
+  --nodo-borde: #5F5A52;
+  --nodo-anillo: #DCCDAA;      /* filete dorado interior */
+  --nodo-texto: var(--texto);
+  --raiz-relleno: var(--oliva);   /* raíz: oliva con número blanco */
+  --raiz-borde: #4F5640;
+  --raiz-texto: #FFFFFF;
+  --arista: #8C8577;
 
-  --color-nodo: var(--marfil);
-  --color-nodo-borde: var(--verde-salvia);
-  --color-nodo-texto: var(--marron-oscuro);
-  --color-raiz: var(--dorado-envejecido);
-  --color-raiz-borde: var(--marron-calido);
-  --color-arista: var(--marron-calido);
-
-  /* Estados de animación (tonos suaves de la misma paleta) */
-  --estado-activo: var(--rosa-antiguo);
-  --estado-activo-borde: var(--dorado-envejecido);
-  --estado-visitado: #E3E7DA;          /* salvia muy clara */
-  --estado-visitado-borde: #8C987C;    /* salvia oscura */
-  --estado-encontrado: var(--verde-salvia);   /* distinto del dorado de la raíz */
-  --estado-encontrado-borde: var(--verde-oscuro);
-  --estado-nuevo: #F1E4DA;             /* rosa antiguo muy claro */
-  --estado-nuevo-borde: var(--dorado-envejecido);
-  --estado-eliminando: #EBD3CB;        /* terracota muy clara */
-  --estado-eliminando-borde: var(--terracota);
-  --estado-sucesor: #F3E9D2;           /* dorado muy claro */
-  --estado-sucesor-borde: var(--dorado-envejecido);
-  --estado-camino: var(--dorado-envejecido);
+  /* Estados del árbol */
+  --estado-activo: var(--rosa);               /* comparando · texto 7.4:1 */
+  --estado-activo-borde: #B98676;
+  --estado-visitado: #DCE0D2;                 /* visitado · salvia · texto 10.6:1 */
+  --estado-visitado-borde: var(--salvia);
+  --estado-encontrado: var(--borgona);        /* texto blanco 7.1:1 */
+  --estado-encontrado-borde: #5E3443;
+  --estado-encontrado-texto: #FFFFFF;
+  --estado-nuevo: #E0A487;                    /* coral claro · texto 6.7:1 */
+  --estado-nuevo-borde: var(--coral);
+  --estado-eliminando: #9E5238;               /* terracota · texto blanco 5.7:1 */
+  --estado-eliminando-borde: #7A3D29;
+  --estado-eliminando-texto: #FFFFFF;
+  --estado-sucesor: #E9D9B4;                  /* dorado claro · texto 10.2:1 */
+  --estado-sucesor-borde: var(--dorado);
+  --estado-camino: var(--coral);
 
   /* Duraciones base (a velocidad 1). El animador cambia --factor-velocidad. */
-  --duracion-cambio: 320ms;
-  --duracion-aparecer: 520ms;
-  --duracion-mover: 780ms;
-  --curva-suave: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duracion-cambio: 380ms;
+  --duracion-aparecer: 640ms;
+  --duracion-mover: 820ms;
+  --curva-suave: cubic-bezier(0.33, 0, 0.2, 1);
+  --curva-brote: cubic-bezier(0.2, 0.7, 0.3, 1);
 
-  --fuente-titulos: Georgia, "Times New Roman", serif;
-  --fuente-texto: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --radio-borde: 10px;
+  --radio: 6px;
+  --radio-control: 5px;
+  --sombra-panel: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 8px 22px -16px rgb(46 42 38 / 0.35);
 
   color-scheme: light;
 }
 
-/* ---------- Base ---------- */
+/* ---------- 2. Base y escala tipográfica ---------- */
 *, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--color-fondo);
-  color: var(--color-texto);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--texto);
   font-family: var(--fuente-texto);
+  font-size: var(--t-base);
   line-height: 1.5;
+  background: var(--fondo);
 }
 
-.contenedor {
-  max-width: 1100px;
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+h1, h2, h3 { margin: 0; }
+
+kbd {
+  font-family: var(--fuente-texto);
+  font-size: 0.74em;
+  font-weight: 600;
+  padding: 0 5px;
+  color: var(--texto-suave);
+  background: var(--lienzo);
+  border: 1px solid var(--linea);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+}
+
+:focus-visible { outline: 2px solid var(--borgona); outline-offset: 2px; }
+
+/* ---------- 3. Encabezado: cabecera compacta con doble filete ---------- */
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  width: calc(100% - 56px);
+  max-width: 1544px;
+  margin: 0 auto 20px;
+  padding: 16px 0 12px;
+  border-bottom: 3px double var(--linea-fuerte);
+}
+.marca-app { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.distintivo { flex: none; width: 46px; height: 46px; }
+.cabecera h1 {
+  font-family: var(--fuente-titulos);
+  font-size: var(--t-h1);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.005em;
+  color: var(--texto);
+}
+.cabecera h1 span { font-style: italic; font-weight: 500; color: var(--borgona); }
+.subtitulo {
+  margin: 4px 0 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+.cabecera-nota {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+.cabecera-nota::before { content: "◆"; margin-right: 8px; font-size: 0.6em; vertical-align: 0.25em; color: var(--dorado); }
+
+/* ---------- 4. Disposición general y paneles ---------- */
+.taller {
+  flex: 1 0 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 28px;
 }
 
-h1, h2 { font-family: var(--fuente-titulos); font-weight: normal; }
-
-/* ---------- Encabezado ---------- */
-/* Solo padding vertical: el horizontal (16px) lo da .contenedor */
-.encabezado { padding-top: 24px; padding-bottom: 8px; }
-.encabezado h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2.2rem); }
-.encabezado p { margin: 4px 0 0; color: var(--color-texto-suave); }
-
-/* ---------- Botones ---------- */
-.boton {
-  padding: 8px 14px;
-  font: inherit;
-  color: var(--color-texto);
-  background: var(--color-superficie);
-  border: 1px solid var(--color-acento);
-  border-radius: var(--radio-borde);
-  cursor: pointer;
-}
-.boton:hover { background: var(--beige-calido); }
-.boton-principal { background: var(--color-acento); }
-.boton-principal:hover { background: var(--rosa-antiguo); }
-
-input:focus-visible, .boton:focus-visible {
-  outline: 2px solid var(--marron-calido);
-  outline-offset: 2px;
+.panel, .escena {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-panel);
 }
 
-.boton:disabled { opacity: 0.5; cursor: not-allowed; }
-.boton:disabled:hover { background: var(--color-superficie); }
-.boton-principal:disabled:hover { background: var(--color-acento); }
-.boton-cancelar:not(:disabled) { border-color: var(--terracota); color: var(--terracota); }
-
-/* ---------- Panel de controles ---------- */
+/* ---------- 5. Panel de controles: grupos numerados como un índice ---------- */
 .panel {
   display: grid;
-  gap: 10px;
-  margin: 16px 0 8px;
-  padding: 12px;
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-borde);
+  grid-template-columns: minmax(0, 1fr); /* el contenido nunca desborda el panel */
+  padding: 4px 20px 6px;
+  counter-reset: grupo;
 }
-.fila-entrada, .fila-reproduccion, .grupo-menu {
+/* Cada grupo: Entrada, Operaciones, Consultas, Recorridos, Adicionales, Reproducción */
+.campo-valor, .seccion-menu, .reproduccion {
+  min-width: 0;
+  padding: 16px 0 18px;
+  border-top: 1px solid var(--linea-suave);
+}
+.campo-valor { border-top: 0; }
+
+.titulo-seccion {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 0 11px;
+  font-family: var(--fuente-titulos);
+  font-size: var(--t-grupo);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--texto);
+}
+.titulo-seccion::before {
+  counter-increment: grupo;
+  content: counter(grupo, decimal-leading-zero);
+  flex: none;
+  font-family: var(--fuente-texto);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--dorado-texto);
+}
+
+.campo-valor { display: grid; gap: 6px; }
+.campo-valor .titulo-seccion { margin-bottom: 5px; }
+.campo-valor label {
+  font-size: var(--t-pequeno);
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+.campo-valor input {
+  width: 100%;
+  padding: 10px 13px;
+  font: 700 1.2rem/1.2 var(--fuente-texto);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  background: var(--lienzo);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: var(--radio-control);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.campo-valor input::placeholder { color: #7A7368; font-weight: 400; }
+.campo-valor input:focus-visible {
+  outline: none;
+  border-color: var(--oliva);
+  box-shadow: 0 0 0 3px rgb(111 119 91 / 0.22);
+}
+.ayuda { margin: 0; color: var(--texto-suave); font-size: var(--t-pequeno); }
+
+.menu { display: grid; }
+
+.botones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.botones:empty { display: none; }
+.botones:not(:empty) + .pendiente { margin-top: 8px; }
+
+.pendiente {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--texto-suave);
+  font-size: var(--t-pequeno);
+  font-style: italic;
+  line-height: 1.4;
+  background: var(--panel-3);
+  border-left: 2px solid var(--dorado);
+  border-radius: 0 var(--radio-control) var(--radio-control) 0;
+}
+
+/* Botones */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 11px;
+  font: 600 var(--t-boton)/1.2 var(--fuente-texto);
+  color: var(--texto);
+  text-align: left;
+  background: var(--lienzo);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-control);
+  box-shadow: 0 1px 0 rgb(46 42 38 / 0.05);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.boton:hover { background: #FFFFFF; border-color: var(--salvia); }
+.boton:active { background: var(--salvia-tenue); }
+.boton .icono { flex: none; color: var(--oliva); }
+.icono {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Insertar: la acción principal */
+.boton-principal {
+  color: #FFFFFF;
+  background: var(--oliva);
+  border-color: var(--oliva-oscuro);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.15) inset, 0 1px 2px rgb(46 42 38 / 0.2);
+}
+.boton-principal .icono { color: #FFFFFF; }
+.boton-principal:hover { background: var(--oliva-oscuro); border-color: #4F5640; }
+.boton-principal:active { background: #555B44; }
+.boton:disabled { cursor: not-allowed; opacity: 0.45; }
+.boton:disabled:hover { background: var(--lienzo); border-color: var(--linea); }
+.boton-principal:disabled:hover { background: var(--oliva); border-color: var(--oliva-oscuro); }
+
+/* Reproducción */
+.reproduccion { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.reproduccion .titulo-seccion { margin-bottom: 1px; }
+.fila-velocidad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--texto-suave);
+}
+.fila-velocidad .icono { color: var(--oliva); }
+.fila-velocidad label { font-weight: 600; font-size: var(--t-boton); color: var(--texto); }
+.fila-velocidad input { flex: 1; min-width: 0; accent-color: var(--oliva); }
+.fila-velocidad output {
+  min-width: 2.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--texto);
+}
+.boton-cancelar { justify-content: center; }
+.boton-cancelar:not(:disabled) { color: var(--coral-texto); border-color: var(--coral); }
+.boton-cancelar:not(:disabled) .icono { color: var(--coral-texto); }
+.boton-cancelar:not(:disabled):hover { background: var(--rosa-tenue); border-color: var(--coral-texto); }
+
+/* ---------- 6. Área del árbol ---------- */
+.escena {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* el lienzo se desplaza; nunca ensancha la escena */
+  gap: 14px;
+  padding: 18px 22px 22px;
+}
+
+.escena-cabecera {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px 20px;
 }
-.fila-entrada input {
-  width: 8rem;
-  padding: 8px 10px;
-  font: inherit;
-  color: var(--color-texto);
-  background: var(--color-fondo);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-borde);
-}
-.ayuda { color: var(--color-texto-suave); font-size: 0.85rem; }
-.menu { display: grid; gap: 8px; }
-.titulo-grupo {
-  min-width: 6.5rem;
-  color: var(--color-texto-suave);
+.escena-cabecera h2 {
   font-family: var(--fuente-titulos);
-  font-style: italic;
+  font-size: var(--t-h2);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--texto);
 }
-@media (max-width: 600px) {
-  .titulo-grupo { flex-basis: 100%; }
-}
-.fila-reproduccion input[type="range"] { accent-color: var(--marron-calido); width: 9rem; }
-.fila-reproduccion output { min-width: 2.5rem; font-variant-numeric: tabular-nums; }
-
-/* ---------- Mensajes ---------- */
-.mensaje { min-height: 1.5em; margin: 8px 0 4px; }
-.mensaje.exito { color: var(--color-exito); }
-.mensaje.error { color: var(--color-error); }
-.mensaje.aviso { color: var(--marron-calido); }
-.camino {
-  margin: 0 0 10px;
-  color: var(--color-texto-suave);
-  font-size: 0.9rem;
+.resumen-arbol {
+  margin: 3px 0 0;
+  color: var(--texto-suave);
+  font-size: var(--t-pequeno);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.utilidades { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* ---------- Área del árbol ----------
-   El SVG mide lo mismo que el dibujo. Si es más grande que el
-   área, aparecen barras de desplazamiento. margin: 0 auto lo
-   centra cuando es más pequeño, sin recortar cuando es más grande. */
+/* Cartela: el resultado de la última operación, con un filete de color según el tipo */
+.cartela {
+  min-height: 3.4rem;
+  padding: 10px 14px 10px 16px;
+  background: var(--lienzo);
+  border: 1px solid var(--linea-suave);
+  border-left: 3px solid var(--rosa);
+  border-radius: var(--radio-control);
+}
+.cartela:has(.mensaje.exito) { border-left-color: var(--oliva); }
+.cartela:has(.mensaje.error) { border-left-color: var(--coral); background: #FBF1EC; }
+.cartela:has(.mensaje.aviso) { border-left-color: var(--dorado); }
+.mensaje { margin: 0; font-size: var(--t-base); font-weight: 600; }
+.mensaje.exito { color: var(--oliva-texto); }
+.mensaje.error { color: var(--coral-texto); }
+.mensaje.aviso { color: var(--texto); }
+.camino {
+  margin: 2px 0 0;
+  color: var(--texto-suave);
+  font-size: var(--t-pequeno);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Marco del árbol: barra superior (rótulo y zoom), lienzo y leyenda al pie */
+.marco-lienzo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--lienzo);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+.barra-lienzo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 6px 5px 14px;
+  background: var(--panel-3);
+  border-bottom: 1px solid var(--linea-suave);
+}
+.rotulo-lienzo {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--texto-suave);
+}
 .lienzo {
   overflow: auto;
-  min-height: 260px;
+  min-height: 360px;
   max-height: 70vh;
-  padding: 8px;
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-borde);
+  padding: 22px 10px 14px;
+  /* Papel cuadriculado muy tenue, como una hoja de cuaderno */
+  background-color: var(--lienzo);
+  background-image:
+    linear-gradient(rgb(111 119 91 / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(111 119 91 / 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+  scrollbar-color: var(--salvia) transparent;
 }
 .lienzo svg { display: block; margin: 0 auto; }
+.lienzo:focus-visible { outline-offset: -3px; }
 
-/* ---------- Árbol (SVG) ---------- */
-.arista {
-  stroke: var(--color-arista);
-  stroke-width: 2;
-  stroke-opacity: 0.55;
-  transition: stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
-              stroke-width calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
-              opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+/* Zoom: integrado en la barra del marco */
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 1px;
 }
-
-/* transform-box: fill-box + transform-origin: center hace que cualquier
-   scale() se aplique alrededor del centro del círculo de cada nodo. */
-.nodo {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
-              opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+.boton-zoom {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--oliva-texto);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radio-control);
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
-
-.nodo circle {
-  fill: var(--color-nodo);
-  stroke: var(--color-nodo-borde);
-  stroke-width: 2.5;
-  transition: fill calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
-              stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
-}
-
-.nodo text {
-  fill: var(--color-nodo-texto);
-  font-family: var(--fuente-texto);
-  font-size: 14px;
-  font-weight: 600;
+.boton-zoom:hover { background: var(--lienzo); border-color: var(--linea); }
+.boton-zoom:disabled { opacity: 0.4; cursor: not-allowed; background: transparent; border-color: transparent; }
+.zoom-texto {
+  min-width: 3.1rem;
+  font-size: 0.84rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
+  text-align: center;
+  color: var(--texto);
 }
 
-.nodo-raiz circle {
-  fill: var(--color-raiz);
-  stroke: var(--color-raiz-borde);
-  stroke-width: 3;
-}
-
-.etiqueta-raiz {
-  fill: var(--color-texto-suave);
-  font-family: var(--fuente-titulos);
-  font-size: 12px;
-  font-style: italic;
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-.etiquetas { transition: opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave); }
-
-.estado-vacio text { text-anchor: middle; dominant-baseline: central; }
-.estado-vacio-titulo { fill: var(--color-texto); font-family: var(--fuente-titulos); font-size: 20px; }
-.estado-vacio-ayuda { fill: var(--color-texto-suave); font-size: 14px; }
-
-/* ---------- Estados de animación (contrato de js/animacion.js) ----------
-   El orden importa: si un nodo tiene varias clases, gana la última regla. */
-.nodo-visitado circle { fill: var(--estado-visitado); stroke: var(--estado-visitado-borde); }
-
-.nodo-activo { transform: scale(1.14); }
-.nodo-activo circle { fill: var(--estado-activo); stroke: var(--estado-activo-borde); stroke-width: 3.5; }
-
-.nodo-encontrado { transform: scale(1.1); }
-.nodo-encontrado circle {
-  fill: var(--estado-encontrado);
-  stroke: var(--estado-encontrado-borde);
-  stroke-width: 3.5;
-  filter: drop-shadow(0 0 5px rgb(94 107 78 / 0.45));
-}
-
-.nodo-nuevo circle { fill: var(--estado-nuevo); stroke: var(--estado-nuevo-borde); stroke-width: 3.5; }
-.nodo-nuevo { animation: aparecer calc(var(--duracion-aparecer) / var(--factor-velocidad, 1)) var(--curva-suave) both; }
-
-.nodo-sucesor circle { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 3; stroke-dasharray: 5 3; }
-.nodo-reemplazo circle { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 3.5; }
-
-.nodo-eliminando circle { fill: var(--estado-eliminando); stroke: var(--estado-eliminando-borde); stroke-width: 3.5; }
-.nodo-desvanecer { opacity: 0; transform: scale(0.6); }
-
-.nodo-oculto, .arista-oculta { opacity: 0; }
-
-.arista-camino { stroke: var(--estado-camino); stroke-opacity: 1; stroke-width: 3.5; }
-
-/* Copia temporal que viaja al mover el valor del sucesor */
-.valor-en-movimiento { transition: transform calc(var(--duracion-mover) / var(--factor-velocidad, 1)) var(--curva-suave); }
-.valor-en-movimiento circle {
-  fill: var(--estado-sucesor);
-  stroke: var(--estado-sucesor-borde);
-  stroke-width: 3;
-  filter: drop-shadow(0 2px 4px rgb(107 86 71 / 0.3));
-}
-.valor-en-movimiento text {
-  fill: var(--color-nodo-texto);
-  font-size: 14px;
-  font-weight: 600;
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-
-@keyframes aparecer {
-  from { opacity: 0; transform: scale(0.4); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Movimiento reducido: sin escalas, desplazamientos ni apariciones animadas.
-   Los cambios de color se mantienen (informan sin mover nada). */
-@media (prefers-reduced-motion: reduce) {
-  .nodo, .nodo circle, .arista, .etiquetas, .valor-en-movimiento { transition: none; }
-  .nodo-nuevo { animation: none; }
-  .nodo-activo, .nodo-encontrado, .nodo-desvanecer { transform: none; }
-}
-
-/* ---------- Leyenda ---------- */
 .leyenda {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 10px 0 0;
-  padding: 0;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 9px 14px;
   list-style: none;
-  color: var(--color-texto-suave);
-  font-size: 0.85rem;
+  color: var(--texto-suave);
+  font-size: var(--t-pequeno);
+  background: var(--panel-3);
+  border-top: 1px solid var(--linea-suave);
 }
-.leyenda li { display: flex; align-items: center; gap: 6px; }
-.muestra { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; }
+.leyenda li { display: flex; align-items: center; gap: 7px; }
+.muestra {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid;
+}
 .muestra-activo { background: var(--estado-activo); border-color: var(--estado-activo-borde); }
 .muestra-visitado { background: var(--estado-visitado); border-color: var(--estado-visitado-borde); }
 .muestra-encontrado { background: var(--estado-encontrado); border-color: var(--estado-encontrado-borde); }
 .muestra-nuevo { background: var(--estado-nuevo); border-color: var(--estado-nuevo-borde); }
 .muestra-eliminando { background: var(--estado-eliminando); border-color: var(--estado-eliminando-borde); }
 .muestra-sucesor { background: var(--estado-sucesor); border-color: var(--estado-sucesor-borde); border-style: dashed; }
+.muestra-raiz { background: var(--raiz-relleno); border-color: var(--raiz-borde); }
 
-/* ---------- Pie ---------- */
-.pie { padding-top: 16px; padding-bottom: 24px;color: var(--color-texto-suave); font-size: 0.85rem; }
+/* Escritorio: el área del árbol acompaña la altura del panel; el lienzo ocupa el espacio libre */
+@media (min-width: 1101px) {
+  .taller { align-items: stretch; }
+  .escena { grid-template-rows: auto auto minmax(0, 1fr); }
+  .lienzo { flex: 1 1 auto; }
+}
+
+/* ---------- 7. Árbol SVG ---------- */
+.estado-vacio text { text-anchor: middle; dominant-baseline: central; }
+.estado-vacio-titulo { fill: var(--texto); font-family: var(--fuente-titulos); font-size: 22px; font-weight: 600; }
+.estado-vacio-ayuda { fill: var(--texto-suave); font-family: var(--fuente-texto); font-size: 15px; }
+
+/* Aristas: ramas finas y curvas */
+.arista {
+  fill: none;
+  stroke: var(--arista);
+  stroke-opacity: 0.8;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  transition:
+    stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    stroke-width calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    stroke-opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+
+/* transform-box: fill-box + transform-origin: center → cualquier scale()
+   se aplica alrededor del centro del círculo del nodo. */
+.nodo {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    filter calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+.nodo .disco {
+  fill: var(--nodo-relleno);
+  stroke: var(--nodo-borde);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 1px rgb(46 42 38 / 0.14));
+  transition:
+    fill calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave),
+    stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+.nodo .anillo {
+  fill: none;
+  stroke: var(--nodo-anillo);
+  stroke-width: 1;
+  transition: stroke calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+/* Números grandes y en negrita; el leve ajuste de espaciado deja entrar «−999» dentro del anillo */
+.nodo text {
+  fill: var(--nodo-texto);
+  font-family: var(--fuente-texto);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  transition: fill calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+
+.nodo-raiz .disco { fill: var(--raiz-relleno); stroke: var(--raiz-borde); stroke-width: 1.8; }
+.nodo-raiz .anillo { stroke: var(--estado-sucesor); stroke-opacity: 0.75; }
+.nodo-raiz text { fill: var(--raiz-texto); }
+.etiqueta-raiz {
+  fill: var(--oliva-texto);
+  font-family: var(--fuente-titulos);
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.etiquetas { transition: opacity calc(var(--duracion-cambio) / var(--factor-velocidad, 1)) var(--curva-suave); }
+
+/* Estados (contrato de js/animacion.js). Si un nodo tiene varias clases, gana la última regla.
+   Cada estado define relleno, borde y color del número, así no hereda el de la raíz. */
+.nodo-visitado .disco { fill: var(--estado-visitado); stroke: var(--estado-visitado-borde); stroke-width: 1.8; }
+.nodo-visitado .anillo { stroke: #FFFFFF; stroke-opacity: 0.7; }
+.nodo-visitado text { fill: var(--texto); }
+
+.nodo-activo { transform: scale(1.14); filter: drop-shadow(0 0 6px rgb(217 178 166 / 0.95)); }
+.nodo-activo .disco { fill: var(--estado-activo); stroke: var(--estado-activo-borde); stroke-width: 2; }
+.nodo-activo .anillo { stroke: #FFFFFF; stroke-opacity: 0.8; }
+.nodo-activo text { fill: var(--texto); }
+
+.nodo-encontrado { transform: scale(1.1); filter: drop-shadow(0 0 7px rgb(123 74 90 / 0.4)); }
+.nodo-encontrado .disco { fill: var(--estado-encontrado); stroke: var(--estado-encontrado-borde); stroke-width: 2; }
+.nodo-encontrado .anillo { stroke: var(--rosa); stroke-opacity: 0.85; }
+.nodo-encontrado text { fill: var(--estado-encontrado-texto); }
+
+.nodo-nuevo .disco { fill: var(--estado-nuevo); stroke: var(--estado-nuevo-borde); stroke-width: 1.8; }
+.nodo-nuevo .anillo { stroke: #FFFFFF; stroke-opacity: 0.75; }
+.nodo-nuevo text { fill: var(--texto); }
+/* El nodo nuevo brota: crece desde su centro con un leve giro y su anillo se dibuja alrededor */
+.nodo-nuevo { animation: brotar calc(var(--duracion-aparecer) / var(--factor-velocidad, 1)) var(--curva-brote) both; }
+.nodo-nuevo .anillo {
+  stroke-dasharray: 100;
+  animation: dibujar-anillo calc(var(--duracion-aparecer) * 1.4 / var(--factor-velocidad, 1)) var(--curva-suave) both;
+}
+
+.nodo-sucesor .disco { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 2; stroke-dasharray: 4 3; }
+.nodo-sucesor .anillo { stroke: #FFFFFF; stroke-opacity: 0.6; }
+.nodo-sucesor text { fill: var(--texto); }
+.nodo-reemplazo .disco { fill: var(--estado-sucesor); stroke: var(--estado-sucesor-borde); stroke-width: 2.4; }
+.nodo-reemplazo .anillo { stroke: #FFFFFF; stroke-opacity: 0.7; }
+.nodo-reemplazo text { fill: var(--texto); }
+
+.nodo-eliminando .disco { fill: var(--estado-eliminando); stroke: var(--estado-eliminando-borde); stroke-width: 2; }
+.nodo-eliminando .anillo { stroke: #FFFFFF; stroke-opacity: 0.45; }
+.nodo-eliminando text { fill: var(--estado-eliminando-texto); }
+/* Se desvanece como un pétalo: pierde opacidad, se encoge y desciende levemente */
+.nodo-desvanecer {
+  opacity: 0;
+  transform: translateY(6px) scale(0.72);
+  filter: blur(1.2px);
+  transition-duration: calc(var(--duracion-cambio) * 1.6 / var(--factor-velocidad, 1));
+}
+
+.nodo-oculto, .arista-oculta { opacity: 0; }
+
+/* El camino recorrido se marca en coral */
+.arista-camino {
+  stroke: var(--estado-camino);
+  stroke-opacity: 1;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 3px rgb(201 122 91 / 0.45));
+}
+
+/* Copia temporal que viaja al mover el valor del sucesor */
+.valor-en-movimiento {
+  transition: transform calc(var(--duracion-mover) / var(--factor-velocidad, 1)) var(--curva-suave);
+}
+.valor-en-movimiento circle {
+  fill: var(--estado-sucesor);
+  stroke: var(--estado-sucesor-borde);
+  stroke-width: 2;
+  filter: drop-shadow(0 3px 5px rgb(46 42 38 / 0.22));
+}
+.valor-en-movimiento text {
+  fill: var(--texto);
+  font-family: var(--fuente-texto);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+@keyframes brotar {
+  0% { opacity: 0; transform: scale(0.2) rotate(-14deg); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes dibujar-anillo {
+  0%, 30% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ---------- 8. Pie ---------- */
+.pie {
+  width: 100%;
+  min-width: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 28px 22px;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: var(--t-pequeno);
+}
+/* Pequeño filete dorado sobre el pie */
+.pie::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 1px;
+  margin: 0 auto 12px;
+  background: var(--dorado);
+}
+.pie p { margin: 0; }
+.marca { font-family: var(--fuente-titulos); font-style: italic; font-weight: 600; color: var(--borgona); }
+
+/* ---------- 9. Tablet y celular ---------- */
+@media (max-width: 1100px) {
+  .cabecera { width: calc(100% - 44px); margin-bottom: 18px; }
+  .taller { grid-template-columns: minmax(0, 1fr); padding: 0 22px; }
+  /* Panel en dos columnas; los grupos se leen en orden: 01-02 / 03-04 / 05-06 */
+  .panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .menu { display: contents; }
+  .seccion-menu[data-seccion="operaciones"] { border-top: 0; }
+  .pie { padding: 18px 22px 20px; }
+}
+
+@media (max-width: 640px) {
+  .cabecera { width: calc(100% - 32px); margin-bottom: 14px; padding: 12px 0 10px; }
+  .distintivo { width: 40px; height: 40px; }
+  .cabecera-nota { display: none; }
+  .taller { padding: 0 16px; gap: 14px; }
+  .panel { grid-template-columns: minmax(0, 1fr); padding: 2px 16px 4px; }
+  .seccion-menu[data-seccion="operaciones"] { border-top: 1px solid var(--linea-suave); }
+  .escena { padding: 16px 12px 14px; }
+  .lienzo { min-height: 280px; max-height: 62vh; padding-top: 18px; }
+  .rotulo-lienzo { display: none; }
+  .barra-lienzo { justify-content: flex-end; }
+  .pie { padding: 16px 16px 20px; }
+}
+
+/* ---------- 10. Movimiento reducido ----------
+   Sin escalas, giros, desplazamientos ni apariciones animadas.
+   Los cambios de color se mantienen: informan sin mover nada. */
+@media (prefers-reduced-motion: reduce) {
+  .nodo, .nodo .disco, .nodo .anillo, .nodo text, .arista, .etiquetas, .valor-en-movimiento, .boton, .boton-zoom { transition: none; }
+  .nodo-nuevo, .nodo-nuevo .anillo { animation: none; }
+  .nodo-activo, .nodo-encontrado, .nodo-desvanecer { transform: none; }
+  .nodo-desvanecer { filter: none; }
+}
